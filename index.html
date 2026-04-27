@@ -3,399 +3,655 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>GitHub Secrets Exposed: Incident Response & Prevention Guide</title>
-  <meta name="description" content="Learn exactly what to do when a GitHub secret leaks — and how to prevent it with pre-commit hooks, OIDC, push protection, and git history cleanup." />
+  <title>Git Mastery + GitHub Secrets: The Complete Security Guide</title>
+  <meta name="description" content="Complete Git fundamentals, advanced workflows, .gitignore, .gitkeep, branching, folder management, and GitHub secrets incident response." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Syne:wght@400;600;700;800&family=Inter:wght@400;500&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800;900&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 
   <style>
     :root {
-      --bg: #0a0c0f;
-      --bg2: #0f1215;
-      --bg3: #141820;
-      --surface: #161b22;
-      --surface2: #1c2330;
-      --border: #21262d;
-      --border2: #30363d;
-      --text: #e6edf3;
-      --text-muted: #7d8590;
-      --text-dim: #484f58;
-      --red: #ff4d4d;
-      --red-dim: rgba(255,77,77,0.12);
-      --red-glow: rgba(255,77,77,0.06);
-      --green: #3fb950;
-      --yellow: #d29922;
-      --blue: #58a6ff;
-      --purple: #bc8cff;
-      --accent: #ff4d4d;
-      --accent2: #ff6b35;
+      /* Core Palette */
+      --bg:        #07080a;
+      --bg2:       #0c0e12;
+      --bg3:       #111418;
+      --surface:   #141920;
+      --surface2:  #1a2030;
+      --surface3:  #1f2738;
+      --border:    #1e2535;
+      --border2:   #2a3347;
+      --border3:   #38455c;
+
+      /* Text */
+      --text:       #dde4f0;
+      --text-muted: #6e7d96;
+      --text-dim:   #3d4a60;
+
+      /* Accent colors */
+      --red:     #f25454;
+      --red-dim: rgba(242,84,84,0.10);
+      --red-glow:rgba(242,84,84,0.05);
+      --orange:  #f5813a;
+      --yellow:  #e8b84b;
+      --green:   #3dd68c;
+      --teal:    #1de9b6;
+      --blue:    #5b9cf6;
+      --indigo:  #7b8ff8;
+      --purple:  #a879f0;
+      --pink:    #e87af0;
+
+      /* Semantic */
+      --accent:    #5b9cf6;
+      --accent2:   #1de9b6;
+      --danger:    #f25454;
+      --warning:   #e8b84b;
+      --success:   #3dd68c;
+      --info:      #5b9cf6;
+
+      /* Type */
       --mono: 'JetBrains Mono', monospace;
-      --sans: 'Syne', sans-serif;
-      --body: 'Inter', sans-serif;
-      --toc-width: 280px;
-      --content-max: 820px;
+      --sans: 'Outfit', sans-serif;
+      --body: 'DM Sans', sans-serif;
+
+      /* Layout */
+      --toc-width: 268px;
+      --hdr-h:     56px;
     }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    html { scroll-behavior: smooth; }
+    html { scroll-behavior: smooth; font-size: 16px; }
 
     body {
       background: var(--bg);
       color: var(--text);
       font-family: var(--body);
-      font-size: 16px;
       line-height: 1.75;
       min-height: 100vh;
+      /* Subtle grid background */
+      background-image:
+        linear-gradient(rgba(91,156,246,0.015) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(91,156,246,0.015) 1px, transparent 1px);
+      background-size: 40px 40px;
     }
 
-    /* ── HEADER ── */
+    /* ═══════════════════════════════════════
+       PROGRESS BAR
+    ═══════════════════════════════════════ */
+    #progressBar {
+      position: fixed; top: 0; left: 0; height: 2px; z-index: 1000;
+      background: linear-gradient(90deg, var(--blue), var(--teal));
+      box-shadow: 0 0 12px var(--blue);
+      transition: width 0.12s linear;
+      width: 0%;
+    }
+
+    /* ═══════════════════════════════════════
+       HEADER
+    ═══════════════════════════════════════ */
     .site-header {
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      background: rgba(10,12,15,0.92);
-      backdrop-filter: blur(12px);
+      position: sticky; top: 0; z-index: 500;
+      height: var(--hdr-h);
+      background: rgba(7,8,10,0.88);
+      backdrop-filter: blur(20px) saturate(180%);
       border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
       padding: 0 2rem;
-      height: 56px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
     }
-    .site-header .logo {
+    .logo {
       font-family: var(--mono);
-      font-size: 0.85rem;
-      color: var(--red);
-      letter-spacing: 0.05em;
-      display: flex;
-      align-items: center;
-      gap: 8px;
+      font-size: 0.78rem;
+      color: var(--blue);
+      letter-spacing: 0.08em;
+      display: flex; align-items: center; gap: 10px;
     }
-    .logo-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--red); box-shadow: 0 0 8px var(--red); animation: pulse 2s ease-in-out infinite; }
-    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+    .logo-pulse {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--blue);
+      box-shadow: 0 0 10px var(--blue);
+      animation: beat 2.4s ease-in-out infinite;
+    }
+    @keyframes beat { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.35;transform:scale(0.7)} }
 
-    .header-tags { display: flex; gap: 6px; }
-    .tag {
+    .hdr-right { display: flex; align-items: center; gap: 8px; }
+    .hdr-badge {
       font-family: var(--mono);
-      font-size: 0.7rem;
-      padding: 2px 8px;
-      border-radius: 3px;
+      font-size: 0.64rem;
+      letter-spacing: 0.06em;
+      padding: 3px 9px;
+      border-radius: 4px;
       border: 1px solid var(--border2);
       color: var(--text-muted);
-      letter-spacing: 0.04em;
     }
+    .hdr-badge.security { border-color: rgba(242,84,84,0.4); color: var(--red); background: var(--red-dim); }
+    .hdr-badge.git      { border-color: rgba(61,214,140,0.3); color: var(--green); background: rgba(61,214,140,0.06); }
 
-    /* ── LAYOUT ── */
+    /* ═══════════════════════════════════════
+       LAYOUT
+    ═══════════════════════════════════════ */
     .layout {
       display: flex;
-      max-width: 1280px;
+      max-width: 1360px;
       margin: 0 auto;
       padding: 0 1.5rem;
     }
 
-    /* ── TOC SIDEBAR ── */
+    /* ═══════════════════════════════════════
+       TOC SIDEBAR
+    ═══════════════════════════════════════ */
     .toc-sidebar {
       width: var(--toc-width);
       flex-shrink: 0;
       position: sticky;
-      top: 56px;
-      height: calc(100vh - 56px);
+      top: var(--hdr-h);
+      height: calc(100vh - var(--hdr-h));
       overflow-y: auto;
-      padding: 2rem 1rem 2rem 0;
+      padding: 1.75rem 1rem 2rem 0;
       border-right: 1px solid var(--border);
       scrollbar-width: thin;
       scrollbar-color: var(--border2) transparent;
     }
-    .toc-sidebar::-webkit-scrollbar { width: 4px; }
-    .toc-sidebar::-webkit-scrollbar-track { background: transparent; }
+    .toc-sidebar::-webkit-scrollbar { width: 3px; }
     .toc-sidebar::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
 
-    .toc-label {
+    .toc-section-label {
       font-family: var(--mono);
-      font-size: 0.65rem;
-      letter-spacing: 0.12em;
+      font-size: 0.6rem;
+      letter-spacing: 0.14em;
       color: var(--text-dim);
       text-transform: uppercase;
-      margin-bottom: 1rem;
-      padding-left: 0.75rem;
+      padding: 0.9rem 0.75rem 0.4rem;
+      margin-top: 0.5rem;
     }
+    .toc-section-label:first-child { margin-top: 0; padding-top: 0; }
+
     .toc-list { list-style: none; }
     .toc-list li { margin: 0; }
     .toc-list a {
-      display: block;
-      padding: 0.3rem 0.75rem;
-      font-size: 0.8rem;
+      display: flex; align-items: center; gap: 8px;
+      padding: 0.28rem 0.75rem;
+      font-size: 0.78rem;
       color: var(--text-muted);
       text-decoration: none;
       border-left: 2px solid transparent;
+      border-radius: 0 4px 4px 0;
       transition: all 0.15s;
       line-height: 1.4;
     }
-    .toc-list a:hover { color: var(--text); border-left-color: var(--border2); }
-    .toc-list a.active { color: var(--red); border-left-color: var(--red); background: var(--red-glow); }
-    .toc-list .toc-sub a { padding-left: 1.5rem; font-size: 0.75rem; }
+    .toc-list a .toc-icon { font-size: 0.65rem; opacity: 0.6; }
+    .toc-list a:hover { color: var(--text); border-left-color: var(--border3); background: rgba(255,255,255,0.02); }
+    .toc-list a.active { color: var(--blue); border-left-color: var(--blue); background: rgba(91,156,246,0.06); }
+    .toc-list a.active-danger { color: var(--red); border-left-color: var(--red); background: var(--red-glow); }
+    .toc-sub a { padding-left: 1.75rem; font-size: 0.72rem; }
 
-    /* ── MAIN CONTENT ── */
+    /* ═══════════════════════════════════════
+       MAIN CONTENT
+    ═══════════════════════════════════════ */
     .main-content {
-      flex: 1;
-      min-width: 0;
-      padding: 3rem 0 6rem 3rem;
-      max-width: var(--content-max);
+      flex: 1; min-width: 0;
+      padding: 0 0 8rem 2.5rem;
+      max-width: 900px;
     }
 
-    /* ── HERO ── */
+    /* ═══════════════════════════════════════
+       HERO
+    ═══════════════════════════════════════ */
     .hero {
-      margin-bottom: 3.5rem;
-      padding-bottom: 3rem;
+      padding: 3.5rem 0 3rem;
+      margin-bottom: 0.5rem;
       border-bottom: 1px solid var(--border);
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute; top: 0; right: -100px;
+      width: 500px; height: 300px;
+      background: radial-gradient(ellipse at 80% 20%, rgba(91,156,246,0.07) 0%, transparent 60%);
+      pointer-events: none;
     }
     .hero-eyebrow {
       font-family: var(--mono);
-      font-size: 0.72rem;
-      letter-spacing: 0.12em;
-      color: var(--red);
+      font-size: 0.7rem;
+      letter-spacing: 0.14em;
+      color: var(--blue);
       text-transform: uppercase;
       margin-bottom: 1rem;
-      display: flex;
-      align-items: center;
-      gap: 8px;
+      display: flex; align-items: center; gap: 10px;
     }
-    .hero-eyebrow::after { content: ''; flex: 1; height: 1px; background: linear-gradient(to right, var(--red-dim), transparent); }
+    .hero-eyebrow::after { content:''; flex:1; height:1px; background: linear-gradient(to right, rgba(91,156,246,0.3), transparent); max-width: 200px; }
+
     .hero h1 {
       font-family: var(--sans);
-      font-size: clamp(1.8rem, 4vw, 2.6rem);
-      font-weight: 800;
-      line-height: 1.15;
-      letter-spacing: -0.02em;
-      margin-bottom: 1rem;
-      color: var(--text);
+      font-size: clamp(1.9rem, 3.5vw, 2.8rem);
+      font-weight: 900;
+      line-height: 1.1;
+      letter-spacing: -0.025em;
+      margin-bottom: 1.1rem;
     }
     .hero h1 em { font-style: normal; color: var(--red); }
+    .hero h1 .hl-blue { color: var(--blue); }
+    .hero h1 .hl-green { color: var(--green); }
+
     .hero-sub {
       font-size: 1rem;
       color: var(--text-muted);
-      max-width: 600px;
-      line-height: 1.6;
+      max-width: 640px;
+      line-height: 1.65;
+      margin-bottom: 1.75rem;
     }
-    .hero-meta {
-      margin-top: 1.5rem;
-      display: flex;
-      gap: 1.5rem;
-      flex-wrap: wrap;
+    .hero-stats {
+      display: flex; gap: 1.5rem; flex-wrap: wrap;
     }
-    .hero-meta-item {
+    .hero-stat {
       font-family: var(--mono);
-      font-size: 0.72rem;
+      font-size: 0.7rem;
       color: var(--text-dim);
-      display: flex;
-      align-items: center;
-      gap: 6px;
+      display: flex; align-items: center; gap: 7px;
     }
-    .hero-meta-item span { color: var(--text-muted); }
+    .hero-stat span { color: var(--text-muted); }
 
-    /* ── ALERT BOX ── */
-    .alert-incident {
-      background: rgba(255,77,77,0.07);
-      border: 1px solid rgba(255,77,77,0.3);
-      border-left: 3px solid var(--red);
-      border-radius: 4px;
+    /* Module cards below hero */
+    .module-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 10px;
+      margin: 2.5rem 0 0;
+    }
+    .module-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
       padding: 1rem 1.25rem;
-      margin: 2rem 0;
-      font-size: 0.92rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-decoration: none;
     }
-    .alert-incident strong { color: var(--red); }
-    .alert-incident a { color: var(--red); text-decoration: underline; text-decoration-style: dotted; }
+    .module-card:hover { border-color: var(--border3); background: var(--surface2); transform: translateY(-1px); }
+    .module-card-icon { font-size: 1.1rem; margin-bottom: 0.5rem; }
+    .module-card-title {
+      font-family: var(--sans);
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 0.2rem;
+    }
+    .module-card-desc {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+    .module-card.danger { border-color: rgba(242,84,84,0.25); }
+    .module-card.danger:hover { border-color: rgba(242,84,84,0.5); background: rgba(242,84,84,0.04); }
+    .module-card.git { border-color: rgba(61,214,140,0.2); }
+    .module-card.git:hover { border-color: rgba(61,214,140,0.4); background: rgba(61,214,140,0.04); }
 
-    .alert-warning {
-      background: rgba(210,153,34,0.07);
-      border: 1px solid rgba(210,153,34,0.3);
-      border-left: 3px solid var(--yellow);
-      border-radius: 4px;
-      padding: 0.9rem 1.25rem;
-      margin: 1.5rem 0;
-      font-size: 0.9rem;
-      color: #c9ad6a;
-    }
-    .alert-note {
-      background: rgba(88,166,255,0.06);
-      border: 1px solid rgba(88,166,255,0.2);
-      border-left: 3px solid var(--blue);
-      border-radius: 4px;
-      padding: 0.9rem 1.25rem;
-      margin: 1.5rem 0;
-      font-size: 0.9rem;
-      color: #8ab4d8;
-    }
-
-    /* ── SECTION HEADINGS ── */
+    /* ═══════════════════════════════════════
+       SECTION HEADINGS
+    ═══════════════════════════════════════ */
     .section-anchor { display: block; position: relative; top: -80px; visibility: hidden; }
+
     h2 {
       font-family: var(--sans);
-      font-size: 1.55rem;
+      font-size: 1.5rem;
       font-weight: 700;
-      margin: 3.5rem 0 1.2rem;
+      margin: 3.5rem 0 1.25rem;
       padding-top: 0.5rem;
-      color: var(--text);
-      letter-spacing: -0.01em;
-      display: flex;
-      align-items: center;
-      gap: 0.6rem;
+      letter-spacing: -0.02em;
+      display: flex; align-items: center; gap: 0.6rem;
     }
-    h2::before {
-      content: '';
-      display: inline-block;
-      width: 3px;
-      height: 1.4em;
-      background: var(--red);
-      border-radius: 2px;
-      flex-shrink: 0;
+    h2 .h2-pill {
+      font-family: var(--mono);
+      font-size: 0.6rem;
+      letter-spacing: 0.1em;
+      padding: 2px 8px;
+      border-radius: 100px;
+      font-weight: 500;
     }
+    h2.git-section::before { content:''; display:inline-block; width:3px; height:1.3em; background: var(--green); border-radius:2px; flex-shrink:0; }
+    h2.sec-section::before { content:''; display:inline-block; width:3px; height:1.3em; background: var(--red); border-radius:2px; flex-shrink:0; }
+    h2.neutral-section::before { content:''; display:inline-block; width:3px; height:1.3em; background: var(--blue); border-radius:2px; flex-shrink:0; }
+
     h3 {
       font-family: var(--sans);
-      font-size: 1.1rem;
+      font-size: 1.05rem;
       font-weight: 600;
-      margin: 2rem 0 0.8rem;
+      margin: 2.2rem 0 0.75rem;
       color: var(--text);
     }
     h4 {
       font-family: var(--mono);
-      font-size: 0.85rem;
+      font-size: 0.78rem;
       font-weight: 600;
       color: var(--text-muted);
-      margin: 1.5rem 0 0.6rem;
-      letter-spacing: 0.04em;
+      margin: 1.75rem 0 0.65rem;
+      letter-spacing: 0.06em;
       text-transform: uppercase;
     }
 
-    /* ── PROSE ── */
-    p { margin-bottom: 1.1rem; color: var(--text); }
+    /* ═══════════════════════════════════════
+       PROSE
+    ═══════════════════════════════════════ */
+    p { margin-bottom: 1.1rem; }
     strong { color: var(--text); font-weight: 600; }
-    em { color: #b0bec5; font-style: italic; }
     a { color: var(--blue); text-decoration: none; }
     a:hover { text-decoration: underline; }
-
-    ul, ol {
-      padding-left: 1.4rem;
-      margin-bottom: 1.1rem;
-    }
+    ul, ol { padding-left: 1.5rem; margin-bottom: 1.1rem; }
     li { margin-bottom: 0.4rem; }
-    li strong { color: var(--text); }
+    hr { border: none; border-top: 1px solid var(--border); margin: 3rem 0; }
 
-    /* ── INLINE CODE ── */
     code {
       font-family: var(--mono);
-      font-size: 0.82em;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 3px;
-      padding: 0.1em 0.4em;
-      color: #e06c75;
+      font-size: 0.8em;
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: 4px;
+      padding: 0.12em 0.42em;
+      color: #e89c6e;
     }
 
-    /* ── CODE BLOCKS ── */
-    pre {
-      background: var(--surface) !important;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      margin: 1.2rem 0 1.5rem;
-      overflow: hidden;
-    }
+    /* ═══════════════════════════════════════
+       CODE BLOCKS
+    ═══════════════════════════════════════ */
+    .code-wrap { margin: 1.25rem 0 1.75rem; border-radius: 8px; border: 1px solid var(--border); overflow: hidden; }
     .code-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
+      display: flex; align-items: center; justify-content: space-between;
       padding: 0.5rem 1rem;
       background: var(--surface2);
       border-bottom: 1px solid var(--border);
+      gap: 1rem;
     }
+    .code-meta { display: flex; align-items: center; gap: 8px; }
+    .code-dots { display:flex; gap:4px; }
+    .code-dot { width:8px; height:8px; border-radius:50%; }
+    .cd-r{background:#f25454;opacity:0.7} .cd-y{background:#e8b84b;opacity:0.7} .cd-g{background:#3dd68c;opacity:0.7}
     .code-lang {
       font-family: var(--mono);
-      font-size: 0.65rem;
-      letter-spacing: 0.08em;
+      font-size: 0.62rem;
+      letter-spacing: 0.1em;
       color: var(--text-dim);
       text-transform: uppercase;
     }
+    .code-title {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      color: var(--text-muted);
+    }
     .copy-btn {
       font-family: var(--mono);
-      font-size: 0.65rem;
+      font-size: 0.62rem;
       color: var(--text-dim);
       background: none;
       border: 1px solid var(--border2);
-      border-radius: 3px;
-      padding: 2px 8px;
+      border-radius: 4px;
+      padding: 3px 10px;
       cursor: pointer;
       transition: all 0.15s;
-      letter-spacing: 0.04em;
+      letter-spacing: 0.06em;
+      white-space: nowrap;
     }
-    .copy-btn:hover { color: var(--text); border-color: var(--text-dim); }
+    .copy-btn:hover { color: var(--text); border-color: var(--border3); }
     .copy-btn.copied { color: var(--green); border-color: var(--green); }
+    pre { background: var(--surface) !important; margin: 0; }
     pre code {
       background: none !important;
       border: none !important;
       padding: 1rem 1.25rem !important;
+      font-size: 0.8rem;
+      line-height: 1.7;
       display: block;
-      font-size: 0.82rem;
-      line-height: 1.65;
-      color: var(--text) !important;
       overflow-x: auto;
+      color: var(--text) !important;
     }
 
-    /* ── TABLES ── */
-    .table-wrap { overflow-x: auto; margin: 1.2rem 0 1.5rem; border-radius: 6px; border: 1px solid var(--border); }
-    table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+    /* ═══════════════════════════════════════
+       ALERT BOXES
+    ═══════════════════════════════════════ */
+    .alert {
+      border-radius: 6px;
+      padding: 0.9rem 1.25rem;
+      margin: 1.5rem 0;
+      font-size: 0.9rem;
+      display: flex;
+      gap: 0.75rem;
+      align-items: flex-start;
+    }
+    .alert-icon { font-size: 1rem; flex-shrink: 0; margin-top: 1px; }
+    .alert.danger  { background: rgba(242,84,84,0.07); border: 1px solid rgba(242,84,84,0.25); border-left: 3px solid var(--red); color: #e0a0a0; }
+    .alert.warning { background: rgba(232,184,75,0.07); border: 1px solid rgba(232,184,75,0.25); border-left: 3px solid var(--yellow); color: #d4b96a; }
+    .alert.info    { background: rgba(91,156,246,0.06); border: 1px solid rgba(91,156,246,0.2); border-left: 3px solid var(--blue); color: #8ab4d8; }
+    .alert.success { background: rgba(61,214,140,0.06); border: 1px solid rgba(61,214,140,0.2); border-left: 3px solid var(--green); color: #7acfa9; }
+    .alert strong { color: inherit; font-weight: 700; }
+    .alert a { color: inherit; text-decoration: underline; text-decoration-style: dotted; }
+
+    /* Big emergency alert */
+    .alert-emergency {
+      background: rgba(242,84,84,0.08);
+      border: 1px solid rgba(242,84,84,0.35);
+      border-radius: 8px;
+      padding: 1.25rem 1.5rem;
+      margin: 2rem 0;
+      display: flex; align-items: center; gap: 1rem;
+    }
+    .alert-emergency-icon { font-size: 1.5rem; flex-shrink: 0; }
+    .alert-emergency-body { flex: 1; }
+    .alert-emergency-title { font-family: var(--sans); font-weight: 700; color: var(--red); font-size: 1rem; margin-bottom: 0.25rem; }
+    .alert-emergency-desc { font-size: 0.88rem; color: #d09090; }
+    .alert-emergency-btn {
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      background: var(--red);
+      color: #fff;
+      padding: 6px 16px;
+      border-radius: 5px;
+      text-decoration: none;
+      white-space: nowrap;
+      transition: opacity 0.15s;
+    }
+    .alert-emergency-btn:hover { opacity: 0.85; text-decoration: none; }
+
+    /* ═══════════════════════════════════════
+       COMMAND REFERENCE CARDS
+    ═══════════════════════════════════════ */
+    .cmd-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+      gap: 10px;
+      margin: 1.5rem 0;
+    }
+    .cmd-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      transition: border-color 0.15s;
+    }
+    .cmd-card:hover { border-color: var(--border3); }
+    .cmd-card-header {
+      background: var(--surface2);
+      border-bottom: 1px solid var(--border);
+      padding: 0.65rem 1rem;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .cmd-name { font-family: var(--mono); font-size: 0.82rem; color: var(--blue); }
+    .cmd-badge {
+      font-family: var(--mono);
+      font-size: 0.6rem;
+      letter-spacing: 0.08em;
+      padding: 2px 7px;
+      border-radius: 3px;
+    }
+    .cb-basic    { background: rgba(91,156,246,0.1); color: var(--blue); border: 1px solid rgba(91,156,246,0.25); }
+    .cb-staging  { background: rgba(61,214,140,0.08); color: var(--green); border: 1px solid rgba(61,214,140,0.2); }
+    .cb-commit   { background: rgba(168,121,240,0.1); color: var(--purple); border: 1px solid rgba(168,121,240,0.25); }
+    .cb-branch   { background: rgba(232,184,75,0.08); color: var(--yellow); border: 1px solid rgba(232,184,75,0.2); }
+    .cb-remote   { background: rgba(245,129,58,0.08); color: var(--orange); border: 1px solid rgba(245,129,58,0.2); }
+    .cb-danger   { background: rgba(242,84,84,0.08); color: var(--red); border: 1px solid rgba(242,84,84,0.2); }
+    .cmd-card-body { padding: 0.85rem 1rem; }
+    .cmd-desc { font-size: 0.82rem; color: var(--text-muted); margin-bottom: 0.65rem; line-height: 1.5; }
+    .cmd-example { font-family: var(--mono); font-size: 0.75rem; color: var(--text-dim); background: var(--bg3); border-radius: 4px; padding: 0.4rem 0.65rem; line-height: 1.6; }
+    .cmd-example .flag { color: var(--yellow); }
+    .cmd-example .arg  { color: var(--teal); }
+    .cmd-example .cmt  { color: var(--text-dim); opacity: 0.7; }
+
+    /* ═══════════════════════════════════════
+       TABLES
+    ═══════════════════════════════════════ */
+    .table-wrap { overflow-x: auto; margin: 1.25rem 0 1.75rem; border-radius: 8px; border: 1px solid var(--border); }
+    table { width: 100%; border-collapse: collapse; font-size: 0.865rem; }
     th {
       background: var(--surface2);
       font-family: var(--mono);
-      font-size: 0.7rem;
-      letter-spacing: 0.08em;
+      font-size: 0.65rem;
+      letter-spacing: 0.1em;
       text-transform: uppercase;
       color: var(--text-muted);
       padding: 0.6rem 1rem;
       text-align: left;
       border-bottom: 1px solid var(--border);
     }
-    td {
-      padding: 0.65rem 1rem;
-      border-bottom: 1px solid var(--border);
-      vertical-align: top;
-    }
+    td { padding: 0.65rem 1rem; border-bottom: 1px solid var(--border); vertical-align: top; }
     tr:last-child td { border-bottom: none; }
-    tr:hover td { background: rgba(255,255,255,0.02); }
-    td code { font-size: 0.78rem; }
+    tr:hover td { background: rgba(255,255,255,0.015); }
+    td code { font-size: 0.76rem; }
+    .td-red   { color: var(--red); font-family: var(--mono); font-size: 0.78rem; white-space: nowrap; }
+    .td-green { color: var(--green); font-family: var(--mono); font-size: 0.78rem; }
+    .td-yellow{ color: var(--yellow); font-size: 0.82rem; }
+    .td-mono  { font-family: var(--mono); font-size: 0.8rem; }
 
-    /* ── CHECKLISTS ── */
-    .checklist { list-style: none; padding: 0; }
-    .checklist li {
-      display: flex;
-      align-items: flex-start;
-      gap: 0.75rem;
-      padding: 0.5rem 0;
-      border-bottom: 1px solid var(--border);
-      font-size: 0.9rem;
+    /* ═══════════════════════════════════════
+       CONCEPTS / CALLOUT BOXES
+    ═══════════════════════════════════════ */
+    .concept-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.25rem 1.5rem;
+      margin: 1.5rem 0;
     }
-    .checklist li:last-child { border-bottom: none; }
-    .check-box {
-      width: 16px;
-      height: 16px;
-      border: 1px solid var(--border2);
+    .concept-box h3 { margin-top: 0; margin-bottom: 0.65rem; font-size: 0.95rem; }
+    .concept-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 10px;
+      margin: 1.5rem 0;
+    }
+    .concept-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem;
+    }
+    .concept-label { font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.1em; color: var(--text-dim); text-transform: uppercase; margin-bottom: 0.35rem; }
+    .concept-value { font-family: var(--sans); font-weight: 600; font-size: 0.92rem; color: var(--text); margin-bottom: 0.35rem; }
+    .concept-desc  { font-size: 0.78rem; color: var(--text-muted); line-height: 1.45; }
+
+    /* ═══════════════════════════════════════
+       WORKFLOW DIAGRAM (ASCII-style)
+    ═══════════════════════════════════════ */
+    .workflow-diagram {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.5rem 2rem;
+      margin: 1.5rem 0;
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      overflow-x: auto;
+    }
+    .wf-node {
+      display: inline-flex; align-items: center; justify-content: center;
+      border: 1px solid var(--border3);
+      border-radius: 5px;
+      padding: 4px 12px;
+      color: var(--text);
+      background: var(--bg3);
+      white-space: nowrap;
+    }
+    .wf-row { display: flex; align-items: center; gap: 0; flex-wrap: wrap; margin: 8px 0; }
+    .wf-arrow { color: var(--text-dim); margin: 0 4px; }
+    .wf-label {
+      font-size: 0.65rem;
+      color: var(--blue);
+      margin: 0 4px;
+      padding: 2px 6px;
+      background: rgba(91,156,246,0.08);
       border-radius: 3px;
-      flex-shrink: 0;
-      margin-top: 3px;
-      cursor: pointer;
-      transition: all 0.15s;
-      display: flex;
-      align-items: center;
-      justify-content: center;
     }
-    .check-box:hover { border-color: var(--green); }
-    .check-box.checked { background: var(--green); border-color: var(--green); }
-    .check-box.checked::after { content: '✓'; color: #000; font-size: 10px; font-weight: 700; }
-    .checklist li.checked-item > span { color: var(--text-muted); text-decoration: line-through; }
+    .wf-label.green { color: var(--green); background: rgba(61,214,140,0.08); }
+    .wf-label.yellow { color: var(--yellow); background: rgba(232,184,75,0.08); }
+    .wf-label.red { color: var(--red); background: var(--red-dim); }
+    .wf-node.highlight { border-color: var(--blue); color: var(--blue); }
+    .wf-node.green { border-color: var(--green); color: var(--green); }
+    .wf-node.red { border-color: var(--red); color: var(--red); }
 
-    /* ── CHECKLIST SECTION CARD ── */
+    /* File tree */
+    .file-tree {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.25rem 1.5rem;
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      line-height: 2;
+      margin: 1.25rem 0;
+    }
+    .ft-dir  { color: var(--blue); }
+    .ft-file { color: var(--text); }
+    .ft-keep { color: var(--yellow); }
+    .ft-ignore { color: var(--text-dim); }
+    .ft-secret { color: var(--red); }
+    .ft-comment { color: var(--text-dim); opacity: 0.7; }
+
+    /* ═══════════════════════════════════════
+       INCIDENT RESPONSE STEPS
+    ═══════════════════════════════════════ */
+    .ir-timeline { margin: 2rem 0; }
+    .ir-step {
+      display: flex; gap: 1.25rem;
+      margin-bottom: 2rem;
+      padding-bottom: 2rem;
+      border-bottom: 1px solid var(--border);
+      position: relative;
+    }
+    .ir-step:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+    .ir-step-num {
+      flex-shrink: 0;
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      border: 2px solid var(--border2);
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+    .ir-step.critical .ir-step-num { border-color: var(--red); color: var(--red); background: var(--red-dim); }
+    .ir-step.warning  .ir-step-num { border-color: var(--yellow); color: var(--yellow); background: rgba(232,184,75,0.08); }
+    .ir-step.info     .ir-step-num { border-color: var(--blue); color: var(--blue); background: rgba(91,156,246,0.08); }
+    .ir-step.done     .ir-step-num { border-color: var(--green); color: var(--green); background: rgba(61,214,140,0.08); }
+    .ir-step-body { flex: 1; min-width: 0; }
+    .ir-step-title {
+      font-family: var(--sans);
+      font-weight: 700;
+      font-size: 1rem;
+      margin-bottom: 0.5rem;
+      display: flex; align-items: center; gap: 0.5rem;
+    }
+    .ir-step-timer {
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      padding: 2px 7px;
+      border-radius: 3px;
+      background: rgba(232,184,75,0.1);
+      color: var(--yellow);
+      border: 1px solid rgba(232,184,75,0.2);
+    }
+
+    /* ═══════════════════════════════════════
+       CHECKLISTS
+    ═══════════════════════════════════════ */
     .checklist-card {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -404,843 +660,1750 @@
       margin: 1.5rem 0;
     }
     .checklist-card h3 {
-      margin-top: 0;
-      margin-bottom: 1rem;
+      margin-top: 0; margin-bottom: 1rem;
       font-size: 0.95rem;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
+      display: flex; align-items: center; gap: 0.5rem;
     }
-    .checklist-card h3 .badge {
+    .cl-badge {
       font-family: var(--mono);
-      font-size: 0.65rem;
-      padding: 2px 6px;
+      font-size: 0.6rem;
+      letter-spacing: 0.08em;
+      padding: 2px 7px;
       border-radius: 3px;
-      letter-spacing: 0.06em;
     }
-    .badge-red { background: var(--red-dim); color: var(--red); border: 1px solid rgba(255,77,77,0.3); }
-    .badge-yellow { background: rgba(210,153,34,0.1); color: var(--yellow); border: 1px solid rgba(210,153,34,0.3); }
-    .badge-green { background: rgba(63,185,80,0.08); color: var(--green); border: 1px solid rgba(63,185,80,0.25); }
+    .cl-r { background: var(--red-dim); color: var(--red); border: 1px solid rgba(242,84,84,0.25); }
+    .cl-y { background: rgba(232,184,75,0.08); color: var(--yellow); border: 1px solid rgba(232,184,75,0.2); }
+    .cl-g { background: rgba(61,214,140,0.08); color: var(--green); border: 1px solid rgba(61,214,140,0.2); }
+    .cl-b { background: rgba(91,156,246,0.08); color: var(--blue); border: 1px solid rgba(91,156,246,0.2); }
 
-    /* ── DEFENSE DIAGRAM ── */
-    .defense-diagram {
+    .checklist { list-style: none; padding: 0; }
+    .checklist li {
+      display: flex; align-items: flex-start; gap: 0.75rem;
+      padding: 0.55rem 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.875rem;
+    }
+    .checklist li:last-child { border-bottom: none; }
+    .check-box {
+      width: 17px; height: 17px;
+      border: 1.5px solid var(--border3);
+      border-radius: 4px;
+      flex-shrink: 0; margin-top: 2px;
+      cursor: pointer;
+      transition: all 0.15s;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .check-box:hover { border-color: var(--green); }
+    .check-box.checked { background: var(--green); border-color: var(--green); }
+    .check-box.checked::after { content: '✓'; color: #000; font-size: 10px; font-weight: 800; }
+
+    /* ═══════════════════════════════════════
+       COMMON MISTAKES CARDS
+    ═══════════════════════════════════════ */
+    .mistake-list { display: flex; flex-direction: column; gap: 10px; margin: 1.5rem 0; }
+    .mistake-item {
+      display: flex; gap: 1rem; align-items: flex-start;
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 8px;
-      padding: 1.5rem 2rem;
-      margin: 1.5rem 0;
+      padding: 1rem 1.25rem;
+    }
+    .mistake-icon { font-size: 1.1rem; flex-shrink: 0; margin-top: 1px; }
+    .mistake-body { flex: 1; }
+    .mistake-title { font-weight: 600; font-size: 0.9rem; margin-bottom: 0.35rem; }
+    .mistake-desc { font-size: 0.82rem; color: var(--text-muted); line-height: 1.5; }
+    .mistake-fix {
       font-family: var(--mono);
-      font-size: 0.82rem;
-    }
-    .defense-layer {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-      padding: 0.6rem 0;
-    }
-    .layer-box {
-      background: var(--bg3);
-      border: 1px solid var(--border2);
+      font-size: 0.75rem;
+      color: var(--teal);
+      margin-top: 0.45rem;
+      padding: 0.35rem 0.65rem;
+      background: rgba(29,233,182,0.06);
       border-radius: 4px;
-      padding: 0.35rem 0.75rem;
-      color: var(--text);
-      white-space: nowrap;
-      font-size: 0.78rem;
-    }
-    .layer-connector {
-      display: flex;
-      flex-direction: column;
-      align-items: flex-start;
-      padding-left: 1rem;
-      gap: 0;
-    }
-    .layer-arrow { color: var(--text-dim); font-size: 0.9rem; line-height: 1; }
-    .layer-label {
-      font-size: 0.7rem;
-      color: var(--red);
-      padding-left: 0.5rem;
-      white-space: nowrap;
+      border-left: 2px solid var(--teal);
     }
 
-    /* ── TIMELINE TABLE ── */
-    .timeline td:first-child { font-family: var(--mono); font-size: 0.78rem; color: var(--red); white-space: nowrap; }
-
-    /* ── HARD NOS TABLE ── */
-    .hardnos td:first-child { font-size: 0.82rem; color: var(--yellow); }
-
-    /* ── RISK BADGE ── */
-    .risk-critical { color: var(--red); }
-    .risk-medium { color: var(--yellow); }
-    .risk-good { color: var(--green); }
-
-    /* ── DIVIDER ── */
-    hr { border: none; border-top: 1px solid var(--border); margin: 3rem 0; }
-
-    /* ── REFERENCES ── */
+    /* ═══════════════════════════════════════
+       REFS GRID
+    ═══════════════════════════════════════ */
     .refs-grid {
       display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 1rem;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 10px;
       margin-top: 1rem;
     }
     .refs-card {
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 6px;
+      border-radius: 8px;
       padding: 1rem 1.25rem;
     }
     .refs-card h4 { margin-top: 0; margin-bottom: 0.6rem; }
     .refs-card ul { padding-left: 0; list-style: none; margin: 0; }
-    .refs-card li { margin-bottom: 0.4rem; font-size: 0.85rem; }
+    .refs-card li { margin-bottom: 0.45rem; font-size: 0.82rem; }
     .refs-card a { color: var(--blue); }
 
-    /* ── FOOTER ── */
+    /* ═══════════════════════════════════════
+       FOOTER
+    ═══════════════════════════════════════ */
     .site-footer {
       border-top: 1px solid var(--border);
       padding: 2rem;
       text-align: center;
       font-family: var(--mono);
-      font-size: 0.72rem;
+      font-size: 0.7rem;
       color: var(--text-dim);
     }
     .site-footer a { color: var(--text-muted); }
 
-    /* ── PROGRESS BAR ── */
-    .progress-bar {
-      position: fixed;
-      top: 56px;
-      left: 0;
-      height: 2px;
-      background: var(--red);
-      z-index: 200;
-      transition: width 0.1s;
-      box-shadow: 0 0 8px var(--red);
-    }
-
-    /* ── MOBILE ── */
-    @media (max-width: 900px) {
-      .toc-sidebar { display: none; }
-      .main-content { padding: 2rem 0; }
-      .layout { padding: 0 1rem; }
-      .refs-grid { grid-template-columns: 1fr; }
-      h1 { font-size: 1.7rem; }
-    }
-
-    /* ── SCROLL FADE IN ── */
-    .fade-in { opacity: 0; transform: translateY(12px); transition: opacity 0.4s ease, transform 0.4s ease; }
+    /* ═══════════════════════════════════════
+       FADE-IN ANIMATIONS
+    ═══════════════════════════════════════ */
+    .fade-in { opacity: 0; transform: translateY(10px); transition: opacity 0.45s ease, transform 0.45s ease; }
     .fade-in.visible { opacity: 1; transform: none; }
+
+    /* ═══════════════════════════════════════
+       RESPONSIVE
+    ═══════════════════════════════════════ */
+    @media (max-width: 960px) {
+      .toc-sidebar { display: none; }
+      .main-content { padding: 1.5rem 0 4rem; }
+      .layout { padding: 0 1rem; }
+      .cmd-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 600px) {
+      .hero h1 { font-size: 1.65rem; }
+      .module-grid { grid-template-columns: 1fr 1fr; }
+    }
+
+    /* ═══════════════════════════════════════
+       SPECIAL INLINE ELEMENTS
+    ═══════════════════════════════════════ */
+    .risk-critical { color: var(--red); font-weight: 700; }
+    .risk-warning  { color: var(--yellow); }
+    .risk-ok       { color: var(--green); }
+    .tag-inline {
+      display: inline-block;
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      padding: 1px 6px;
+      border-radius: 3px;
+      border: 1px solid var(--border2);
+      color: var(--text-muted);
+      letter-spacing: 0.04em;
+      margin-left: 4px;
+    }
+
+    /* Defense-in-depth layered diagram */
+    .did-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; margin: 1.5rem 0; }
+    .did-layer { display: flex; align-items: stretch; margin-bottom: 0; }
+    .did-node {
+      flex: 0 0 180px;
+      background: var(--bg3);
+      border: 1px solid var(--border2);
+      border-radius: 6px;
+      padding: 0.5rem 1rem;
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      color: var(--text);
+      text-align: center;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .did-connector { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; padding: 0 1.25rem; flex: 1; }
+    .did-arrow { color: var(--text-dim); font-size: 1rem; margin-bottom: 2px; }
+    .did-label { font-family: var(--mono); font-size: 0.67rem; color: var(--blue); padding: 2px 6px; background: rgba(91,156,246,0.07); border-radius: 3px; }
+    .did-gap { width: 180px; flex: 0 0 180px; display: flex; align-items: center; justify-content: center; }
+    .did-vert { width: 1px; height: 28px; background: var(--border); margin: 0 auto; }
   </style>
 </head>
 <body>
 
-<div class="progress-bar" id="progressBar"></div>
+<div id="progressBar"></div>
 
-<!-- HEADER -->
+<!-- ══════════════════════ HEADER ══════════════════════ -->
 <header class="site-header">
   <div class="logo">
-    <div class="logo-dot"></div>
-    github-secrets-guide.md
+    <div class="logo-pulse"></div>
+    git-mastery-and-secrets.md
   </div>
-  <div class="header-tags">
-    <span class="tag">security</span>
-    <span class="tag">devsecops</span>
-    <span class="tag">github</span>
+  <div class="hdr-right">
+    <span class="hdr-badge git">git</span>
+    <span class="hdr-badge security">security</span>
+    <span class="hdr-badge">devsecops</span>
   </div>
 </header>
 
-<!-- LAYOUT -->
+<!-- ══════════════════════ LAYOUT ══════════════════════ -->
 <div class="layout">
 
-  <!-- TOC SIDEBAR -->
+  <!-- ═══ TOC SIDEBAR ═══ -->
   <aside class="toc-sidebar">
-    <div class="toc-label">Contents</div>
+    <div class="toc-section-label">Git Fundamentals</div>
     <ul class="toc-list">
-      <li><a href="#how-secrets-leak">How Secrets Leak</a></li>
-      <li><a href="#defense-in-depth">Defense-in-Depth Model</a></li>
-      <li><a href="#incident-response">Incident Response</a></li>
-      <li class="toc-sub"><a href="#incident-response">Step 1 — Rotate</a></li>
-      <li class="toc-sub"><a href="#incident-response">Step 2 — Make private</a></li>
-      <li class="toc-sub"><a href="#incident-response">Step 3 — Audit logs</a></li>
-      <li class="toc-sub"><a href="#incident-response">Steps 4–6</a></li>
-      <li><a href="#git-history">Why Git History Is Dangerous</a></li>
-      <li><a href="#removing-history">Removing from History</a></li>
-      <li class="toc-sub"><a href="#removing-history">git-filter-repo</a></li>
-      <li class="toc-sub"><a href="#removing-history">BFG Cleaner</a></li>
-      <li><a href="#secrets-management">Secrets Management</a></li>
-      <li class="toc-sub"><a href="#secrets-management">OIDC vs Static Keys</a></li>
-      <li class="toc-sub"><a href="#secrets-management">Secrets Managers</a></li>
-      <li><a href="#actions-hardening">GitHub Actions Hardening</a></li>
-      <li><a href="#preventive-controls">Preventive Controls</a></li>
-      <li><a href="#hard-nos">Hard Nos</a></li>
-      <li><a href="#checklists">Checklists</a></li>
-      <li><a href="#references">References</a></li>
+      <li><a href="#git-concepts"><span class="toc-icon">◆</span> Core Concepts</a></li>
+      <li><a href="#git-setup"><span class="toc-icon">◆</span> Initial Setup</a></li>
+      <li><a href="#git-staging"><span class="toc-icon">◆</span> Staging &amp; Committing</a></li>
+      <li class="toc-sub"><a href="#git-add">git add</a></li>
+      <li class="toc-sub"><a href="#git-commit">git commit</a></li>
+      <li class="toc-sub"><a href="#git-flags">Flags: -a -m -am</a></li>
+      <li><a href="#git-branching"><span class="toc-icon">◆</span> Branching</a></li>
+      <li class="toc-sub"><a href="#git-branching">Create &amp; switch</a></li>
+      <li class="toc-sub"><a href="#git-branch-delete">Delete a branch</a></li>
+      <li><a href="#git-remote"><span class="toc-icon">◆</span> Remote Operations</a></li>
+      <li><a href="#git-folder"><span class="toc-icon">◆</span> Folder Structure</a></li>
+      <li class="toc-sub"><a href="#git-gitkeep">.gitkeep</a></li>
+      <li><a href="#git-gitignore"><span class="toc-icon">◆</span> .gitignore</a></li>
+      <li><a href="#git-undo"><span class="toc-icon">◆</span> Undo &amp; Fix</a></li>
+      <li><a href="#git-stash"><span class="toc-icon">◆</span> Stash &amp; Tags</a></li>
+      <li><a href="#git-challenges"><span class="toc-icon">◆</span> Common Challenges</a></li>
+    </ul>
+    <div class="toc-section-label">GitHub Security</div>
+    <ul class="toc-list">
+      <li><a href="#how-secrets-leak"><span class="toc-icon">◆</span> How Secrets Leak</a></li>
+      <li><a href="#defense-in-depth"><span class="toc-icon">◆</span> Defense-in-Depth</a></li>
+      <li><a href="#incident-response"><span class="toc-icon">◆</span> Incident Response</a></li>
+      <li class="toc-sub"><a href="#ir-step1">Step 1 — Rotate</a></li>
+      <li class="toc-sub"><a href="#ir-step2">Step 2 — Contain</a></li>
+      <li class="toc-sub"><a href="#ir-step3">Step 3 — Audit</a></li>
+      <li class="toc-sub"><a href="#ir-step4">Step 4 — Clean History</a></li>
+      <li class="toc-sub"><a href="#ir-step5">Step 5 — Harden</a></li>
+      <li><a href="#git-history"><span class="toc-icon">◆</span> History Rewriting</a></li>
+      <li><a href="#secrets-mgmt"><span class="toc-icon">◆</span> Secrets Management</a></li>
+      <li><a href="#actions-hardening"><span class="toc-icon">◆</span> Actions Hardening</a></li>
+      <li><a href="#preventive"><span class="toc-icon">◆</span> Preventive Controls</a></li>
+      <li><a href="#hard-nos"><span class="toc-icon">◆</span> Hard No's</a></li>
+      <li><a href="#checklists"><span class="toc-icon">◆</span> Checklists</a></li>
+      <li><a href="#references"><span class="toc-icon">◆</span> References</a></li>
     </ul>
   </aside>
 
-  <!-- MAIN CONTENT -->
+  <!-- ═══ MAIN ═══ -->
   <main class="main-content">
 
-    <!-- HERO -->
+    <!-- ══════════ HERO ══════════ -->
     <div class="hero fade-in">
-      <div class="hero-eyebrow">Incident Response &amp; Prevention</div>
-      <h1>You Made a Private Repo Public <em>by Mistake</em> — Now What?</h1>
-      <p class="hero-sub">A complete guide to GitHub secrets: what happens when credentials leak, how to respond in the first minutes, and how to build the controls that stop it from happening again.</p>
-      <div class="hero-meta">
-        <div class="hero-meta-item">⏱ <span>~20 min read</span></div>
-        <div class="hero-meta-item">🔒 <span>11 sections</span></div>
-        <div class="hero-meta-item">✓ <span>Technically reviewed</span></div>
+      <div class="hero-eyebrow">Complete Reference · Git + GitHub Security</div>
+      <h1>Git Mastery + <em>Secrets</em> Incident Response</h1>
+      <p class="hero-sub">From your first <code>git init</code> to production-grade secret exposure response. Every command, every flag, every failure mode — with zero hand-waving.</p>
+      <div class="hero-stats">
+        <div class="hero-stat">⏱ <span>~30 min read</span></div>
+        <div class="hero-stat">📦 <span>2 modules</span></div>
+        <div class="hero-stat">⌨ <span>40+ commands</span></div>
+        <div class="hero-stat">✓ <span>Technically reviewed</span></div>
+      </div>
+      <div class="module-grid">
+        <a href="#git-concepts" class="module-card git" style="text-decoration:none">
+          <div class="module-card-icon">🌿</div>
+          <div class="module-card-title">Git Fundamentals</div>
+          <div class="module-card-desc">Concepts, staging, commits, branching, folder structure, .gitignore, common pitfalls</div>
+        </a>
+        <a href="#how-secrets-leak" class="module-card danger" style="text-decoration:none">
+          <div class="module-card-icon">🔐</div>
+          <div class="module-card-title">GitHub Secrets &amp; IR</div>
+          <div class="module-card-desc">Exposure timelines, incident response playbook, history rewriting, hardening</div>
+        </a>
+        <a href="#git-challenges" class="module-card" style="text-decoration:none">
+          <div class="module-card-icon">🧩</div>
+          <div class="module-card-title">Common Challenges</div>
+          <div class="module-card-desc">Merge conflicts, detached HEAD, force-push, rebase vs merge, lost commits</div>
+        </a>
+        <a href="#checklists" class="module-card" style="text-decoration:none">
+          <div class="module-card-icon">✅</div>
+          <div class="module-card-title">Interactive Checklists</div>
+          <div class="module-card-desc">Pre-PR, pre-public repo, post-incident — click to track progress</div>
+        </a>
       </div>
     </div>
 
-    <!-- EMERGENCY ALERT -->
-    <div class="alert-incident fade-in">
-      🚨 <strong>Already in an incident?</strong> Jump to <a href="#incident-response">Incident Response</a> right now. Come back and read the rest after you've rotated everything.
-    </div>
-
-    <!-- INTRO -->
-    <div class="fade-in">
-      <p>It's 11:43 PM. A developer on your team is cleaning up repositories — archiving old projects, updating descriptions. They toggle one repo to public by mistake. They notice thirty seconds later and toggle it back.</p>
-      <p>It's already too late.</p>
-      <p>Within seconds of a repository becoming public, automated bots monitoring GitHub's public event stream have cloned it, scanned every file and every commit in history, and extracted any credential-shaped strings they find. By the time your developer refreshed the page, that AWS key was being tested against the AWS API. By midnight, crypto miners were running in your account.</p>
-      <p>This isn't a hypothetical. It's the exact pattern behind thousands of real incidents. The scraping infrastructure is always running, always watching, and faster than any human reaction time.</p>
-      <p><strong>This guide exists so you're prepared before it happens — and know exactly what to do if it does.</strong></p>
+    <!-- Emergency Alert -->
+    <div class="alert-emergency fade-in">
+      <div class="alert-emergency-icon">🚨</div>
+      <div class="alert-emergency-body">
+        <div class="alert-emergency-title">Already in an incident?</div>
+        <div class="alert-emergency-desc">Skip directly to the incident response playbook. Rotate credentials first, read the rest after.</div>
+      </div>
+      <a href="#incident-response" class="alert-emergency-btn">→ Jump to IR</a>
     </div>
 
     <hr>
 
-    <!-- SECTION: HOW SECRETS LEAK -->
-    <span class="section-anchor" id="how-secrets-leak"></span>
-    <h2 class="fade-in">How Secrets Actually Leak</h2>
+    <!-- ══════════════════════════════════════════
+         MODULE 1: GIT FUNDAMENTALS
+    ══════════════════════════════════════════ -->
+
+    <!-- SECTION: CORE CONCEPTS -->
+    <span class="section-anchor" id="git-concepts"></span>
+    <h2 class="git-section fade-in">Core Git Concepts <span class="h2-pill cb-staging">foundation</span></h2>
     <div class="fade-in">
-      <p>Before we talk about fixes, let's be honest about how secrets end up in git in the first place. It's rarely carelessness — it's almost always a workflow gap.</p>
-      <p><strong>The most common leak patterns:</strong></p>
+      <p>Git is a <strong>distributed version control system</strong>. Every copy of the repository is a full backup with complete history. Understanding the three-tree model is the single most important thing you can know.</p>
+
+      <div class="concept-grid">
+        <div class="concept-item">
+          <div class="concept-label">Working Tree</div>
+          <div class="concept-value">Your filesystem</div>
+          <div class="concept-desc">The files you see and edit. Changes here are <em>untracked</em> until staged.</div>
+        </div>
+        <div class="concept-item">
+          <div class="concept-label">Staging Area / Index</div>
+          <div class="concept-value">Snapshot buffer</div>
+          <div class="concept-desc">Files you've <code>git add</code>-ed. Prepares exactly what will go into the next commit.</div>
+        </div>
+        <div class="concept-item">
+          <div class="concept-label">Repository (.git)</div>
+          <div class="concept-value">Object database</div>
+          <div class="concept-desc">The permanent record. All commits, blobs, trees, and refs live here. This is what gets pushed.</div>
+        </div>
+      </div>
+
+      <div class="workflow-diagram fade-in">
+        <div class="wf-row">
+          <div class="wf-node">Working Tree</div>
+          <div class="wf-arrow">──</div>
+          <div class="wf-label">git add</div>
+          <div class="wf-arrow">──▶</div>
+          <div class="wf-node highlight">Staging Area</div>
+          <div class="wf-arrow">──</div>
+          <div class="wf-label green">git commit</div>
+          <div class="wf-arrow">──▶</div>
+          <div class="wf-node green">Local Repo</div>
+          <div class="wf-arrow">──</div>
+          <div class="wf-label">git push</div>
+          <div class="wf-arrow">──▶</div>
+          <div class="wf-node">Remote (GitHub)</div>
+        </div>
+        <div class="wf-row" style="margin-top:12px">
+          <div class="wf-node">Remote (GitHub)</div>
+          <div class="wf-arrow">──</div>
+          <div class="wf-label yellow">git pull / fetch</div>
+          <div class="wf-arrow">──▶</div>
+          <div class="wf-node">Local Repo</div>
+          <div class="wf-arrow">──</div>
+          <div class="wf-label red">git checkout / restore</div>
+          <div class="wf-arrow">──▶</div>
+          <div class="wf-node">Working Tree</div>
+        </div>
+      </div>
+
+      <p>Every <strong>commit</strong> is an immutable SHA-1/SHA-256 hash of a snapshot — not a diff. Git computes what changed by comparing snapshots. This distinction matters enormously when you need to understand why <code>git reset</code>, <code>git revert</code>, and <code>git rebase</code> behave the way they do.</p>
+    </div>
+
+    <hr>
+
+    <!-- SECTION: INITIAL SETUP -->
+    <span class="section-anchor" id="git-setup"></span>
+    <h2 class="git-section fade-in">Initial Setup</h2>
+    <div class="fade-in">
+      <p>These are one-time operations you must do before Git tracks you correctly. Skipping them causes attribution issues and failed GPG signing.</p>
+
+      <div class="code-wrap">
+        <div class="code-header">
+          <div class="code-meta">
+            <div class="code-dots"><div class="code-dot cd-r"></div><div class="code-dot cd-y"></div><div class="code-dot cd-g"></div></div>
+            <div class="code-lang">bash</div>
+            <div class="code-title">global config</div>
+          </div>
+          <button class="copy-btn" onclick="copyCode(this)">copy</button>
+        </div>
+        <pre><code class="language-bash"># Identity — embedded in every commit you make
+git config --global user.name  "Your Name"
+git config --global user.email "you@example.com"
+
+# Default branch name (modern standard: main, not master)
+git config --global init.defaultBranch main
+
+# Editor for commit messages (change to nano, code --wait, etc.)
+git config --global core.editor vim
+
+# Line endings (macOS/Linux: input | Windows: true)
+git config --global core.autocrlf input
+
+# Show config
+git config --global --list
+
+# Init a new repo
+git init                    # in current directory
+git init my-project         # creates new dir
+git clone https://github.com/org/repo.git   # clone remote</code></pre>
+      </div>
+
+      <div class="alert info">
+        <div class="alert-icon">ℹ️</div>
+        <div><strong>Scope hierarchy:</strong> <code>--system</code> (all users, /etc/gitconfig) &lt; <code>--global</code> (your user, ~/.gitconfig) &lt; <code>--local</code> (this repo, .git/config). More specific overrides more general. Use <code>--local</code> inside repos that need different credentials (e.g., work vs personal).</div>
+      </div>
+    </div>
+
+    <hr>
+
+    <!-- SECTION: STAGING & COMMITTING -->
+    <span class="section-anchor" id="git-staging"></span>
+    <h2 class="git-section fade-in">Staging &amp; Committing</h2>
+
+    <!-- git add -->
+    <span class="section-anchor" id="git-add"></span>
+    <h3 class="fade-in">git add — Building the Staging Area</h3>
+    <div class="fade-in">
+      <p><code>git add</code> does not save a file — it takes a snapshot of the file <em>at this moment</em> and places it in the index. If you modify the file again after <code>git add</code>, you need to <code>git add</code> again.</p>
+
+      <div class="cmd-grid">
+        <div class="cmd-card">
+          <div class="cmd-card-header"><div class="cmd-name">git add &lt;file&gt;</div><div class="cmd-badge cb-staging">staging</div></div>
+          <div class="cmd-card-body">
+            <div class="cmd-desc">Stage a single specific file. Most precise — use this by default to avoid accidental staging.</div>
+            <div class="cmd-example">git add <span class="arg">src/auth.py</span></div>
+          </div>
+        </div>
+        <div class="cmd-card">
+          <div class="cmd-card-header"><div class="cmd-name">git add .</div><div class="cmd-badge cb-staging">staging</div></div>
+          <div class="cmd-card-body">
+            <div class="cmd-desc">Stage all new and modified files in the current directory tree. Respects <code>.gitignore</code>. Does <em>not</em> stage deleted files in older Git versions — use <code>git add -A</code> for that.</div>
+            <div class="cmd-example">git add .</div>
+          </div>
+        </div>
+        <div class="cmd-card">
+          <div class="cmd-card-header"><div class="cmd-name">git add -A / --all</div><div class="cmd-badge cb-staging">staging</div></div>
+          <div class="cmd-card-body">
+            <div class="cmd-desc">Stage everything: new, modified, <em>and deleted</em> files across the entire repo (not just current directory). The safest "add everything" command.</div>
+            <div class="cmd-example">git add <span class="flag">-A</span></div>
+          </div>
+        </div>
+        <div class="cmd-card">
+          <div class="cmd-card-header"><div class="cmd-name">git add -p / --patch</div><div class="cmd-badge cb-staging">staging</div></div>
+          <div class="cmd-card-body">
+            <div class="cmd-desc">Interactive hunk-by-hunk staging. Opens each changed hunk and asks: stage (y), skip (n), split (s), or edit (e). Crucial for creating clean, focused commits from messy work sessions.</div>
+            <div class="cmd-example">git add <span class="flag">-p</span> <span class="arg">src/auth.py</span></div>
+          </div>
+        </div>
+        <div class="cmd-card">
+          <div class="cmd-card-header"><div class="cmd-name">git add -u</div><div class="cmd-badge cb-staging">staging</div></div>
+          <div class="cmd-card-body">
+            <div class="cmd-desc">Stage only <em>modified and deleted</em> tracked files. Ignores untracked (new) files. Useful when you don't want to accidentally include new credential files you haven't gitignored yet.</div>
+            <div class="cmd-example">git add <span class="flag">-u</span></div>
+          </div>
+        </div>
+        <div class="cmd-card">
+          <div class="cmd-card-header"><div class="cmd-name">git restore --staged</div><div class="cmd-badge cb-danger">unstage</div></div>
+          <div class="cmd-card-body">
+            <div class="cmd-desc">Remove a file from staging without discarding working tree changes. Replaces the old <code>git reset HEAD &lt;file&gt;</code> for unstaging (Git 2.23+).</div>
+            <div class="cmd-example">git restore <span class="flag">--staged</span> <span class="arg">secrets.txt</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="code-wrap">
+        <div class="code-header">
+          <div class="code-meta">
+            <div class="code-dots"><div class="code-dot cd-r"></div><div class="code-dot cd-y"></div><div class="code-dot cd-g"></div></div>
+            <div class="code-lang">bash</div>
+            <div class="code-title">staging workflow</div>
+          </div>
+          <button class="copy-btn" onclick="copyCode(this)">copy</button>
+        </div>
+        <pre><code class="language-bash"># See what's going on
+git status                      # full status
+git status -s                   # short format: M = modified, A = added, ? = untracked
+
+# Stage selectively
+git add src/login.py            # one file
+git add src/                    # entire directory
+git add "*.py"                  # glob (quote to prevent shell expansion)
+git add -p                      # interactive per-hunk
+
+# Verify what will be committed (diff of staged vs last commit)
+git diff --staged               # or: git diff --cached
+
+# Unstage everything
+git restore --staged .
+
+# Remove a file from tracking without deleting it from disk
+git rm --cached config.env      # keeps file locally, stops tracking it</code></pre>
+      </div>
+    </div>
+
+    <!-- git commit -->
+    <span class="section-anchor" id="git-commit"></span>
+    <h3 class="fade-in">git commit — Recording History</h3>
+    <div class="fade-in">
+      <p>A commit is a permanent snapshot of the staged index. It stores: tree (file state), parent commit hash(es), author, committer, timestamp, and your message. All of this is SHA hashed — tamper-evident by design.</p>
+
+      <div class="cmd-grid">
+        <div class="cmd-card">
+          <div class="cmd-card-header"><div class="cmd-name">git commit</div><div class="cmd-badge cb-commit">commit</div></div>
+          <div class="cmd-card-body">
+            <div class="cmd-desc">Open your configured editor to write a multi-line commit message. First line is the subject (≤72 chars), blank line, then body. Best practice for non-trivial commits.</div>
+            <div class="cmd-example">git commit</div>
+          </div>
+        </div>
+        <div class="cmd-card">
+          <div class="cmd-card-header"><div class="cmd-name">git commit -m "msg"</div><div class="cmd-badge cb-commit">commit</div></div>
+          <div class="cmd-card-body">
+            <div class="cmd-desc">Commit with an inline message. <code>-m</code> stands for <em>message</em>. Use for short, atomic commits. Can be stacked: <code>-m "Subject" -m "Body paragraph."</code></div>
+            <div class="cmd-example">git commit <span class="flag">-m</span> <span class="arg">"fix: validate JWT expiry"</span></div>
+          </div>
+        </div>
+        <div class="cmd-card">
+          <div class="cmd-card-header"><div class="cmd-name">git commit -a</div><div class="cmd-badge cb-commit">commit</div></div>
+          <div class="cmd-card-body">
+            <div class="cmd-desc"><strong>Auto-stage then commit.</strong> Stages all modified and deleted <em>already-tracked</em> files and commits in one step. Does <strong>not</strong> add new (untracked) files. Opens editor for message.</div>
+            <div class="cmd-example">git commit <span class="flag">-a</span></div>
+          </div>
+        </div>
+        <div class="cmd-card">
+          <div class="cmd-card-header"><div class="cmd-name">git commit -am "msg"</div><div class="cmd-badge cb-commit">commit</div></div>
+          <div class="cmd-card-body">
+            <div class="cmd-desc">Combines <code>-a</code> and <code>-m</code>. Auto-stage tracked changes + inline message. Fastest way to commit changes to existing files. <span class="risk-warning">Risk: can include changes you didn't intend.</span></div>
+            <div class="cmd-example">git commit <span class="flag">-am</span> <span class="arg">"chore: update timeout value"</span></div>
+          </div>
+        </div>
+        <div class="cmd-card">
+          <div class="cmd-card-header"><div class="cmd-name">git commit --amend</div><div class="cmd-badge cb-danger">rewrite</div></div>
+          <div class="cmd-card-body">
+            <div class="cmd-desc">Replace the last commit with a new one (different content, message, or both). Changes the SHA — <strong>never amend commits already pushed to shared branches.</strong></div>
+            <div class="cmd-example">git commit <span class="flag">--amend</span> <span class="flag">-m</span> <span class="arg">"corrected message"</span></div>
+          </div>
+        </div>
+        <div class="cmd-card">
+          <div class="cmd-card-header"><div class="cmd-name">git commit --no-verify</div><div class="cmd-badge cb-danger">bypass</div></div>
+          <div class="cmd-card-body">
+            <div class="cmd-desc">Skip pre-commit and commit-msg hooks. <span class="risk-critical">Bypasses secret scanning hooks.</span> Only use in exceptional circumstances with full understanding of what you're skipping.</div>
+            <div class="cmd-example"><span class="cmt"># Dangerous — skips gitleaks, linters, etc.</span><br>git commit <span class="flag">--no-verify</span> <span class="flag">-m</span> <span class="arg">"msg"</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="alert warning">
+        <div class="alert-icon">⚠️</div>
+        <div><strong>The -a flag does not add new files.</strong> A common mistake is running <code>git commit -am "msg"</code> after creating a new file, expecting it to be included. New files must be explicitly <code>git add</code>-ed at least once before <code>-a</code> can track them.</div>
+      </div>
+
+      <h4>Commit Message Convention (Conventional Commits)</h4>
+      <div class="code-wrap">
+        <div class="code-header">
+          <div class="code-meta">
+            <div class="code-dots"><div class="code-dot cd-r"></div><div class="code-dot cd-y"></div><div class="code-dot cd-g"></div></div>
+            <div class="code-lang">text</div>
+            <div class="code-title">commit message format</div>
+          </div>
+          <button class="copy-btn" onclick="copyCode(this)">copy</button>
+        </div>
+        <pre><code class="language-text">&lt;type&gt;(&lt;scope&gt;): &lt;short subject&gt;
+
+[optional body — explain WHY not WHAT]
+
+[optional footer: BREAKING CHANGE, Closes #123]
+
+# Types:
+#   feat     — new feature
+#   fix      — bug fix
+#   docs     — documentation only
+#   refactor — code change (not feat/fix)
+#   chore    — build process, tooling
+#   test     — adding or fixing tests
+#   ci       — CI/CD config changes
+#   perf     — performance improvements
+#   security — security fixes
+
+# Examples:
+feat(auth): add PKCE flow for OAuth2
+fix(db): prevent SQL injection in search query
+security: rotate JWT signing key and invalidate sessions
+chore: pin actions to SHA hashes</code></pre>
+      </div>
+    </div>
+
+    <!-- FLAGS DEEP DIVE -->
+    <span class="section-anchor" id="git-flags"></span>
+    <h3 class="fade-in">Flag Deep-Dive: -a, -m, -am, and others</h3>
+    <div class="fade-in">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Flag/Option</th><th>What it does</th><th>Adds new files?</th><th>When to use</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="td-mono">git add . &amp;&amp; git commit -m</td>
+              <td>Explicit full control — stage all, then commit with message</td>
+              <td class="td-green">Yes</td>
+              <td>Default workflow; most intentional</td>
+            </tr>
+            <tr>
+              <td class="td-mono">git commit -m "msg"</td>
+              <td>Commit only what's already staged, with inline message</td>
+              <td class="td-red">No</td>
+              <td>When you've already staged exactly what you want</td>
+            </tr>
+            <tr>
+              <td class="td-mono">git commit -a</td>
+              <td>Auto-stage modified+deleted tracked files; opens editor</td>
+              <td class="td-red">No</td>
+              <td>Quick commits on existing files with detailed message</td>
+            </tr>
+            <tr>
+              <td class="td-mono">git commit -am "msg"</td>
+              <td>Auto-stage tracked changes + inline message in one step</td>
+              <td class="td-red">No</td>
+              <td>Fast iteration on existing code — but verify with git status first</td>
+            </tr>
+            <tr>
+              <td class="td-mono">git commit --amend</td>
+              <td>Rewrite last commit (SHA changes — do not push if already shared)</td>
+              <td class="td-green">Yes (if staged)</td>
+              <td>Fix typo in message or forgot to stage a file</td>
+            </tr>
+            <tr>
+              <td class="td-mono">git commit -p</td>
+              <td>Interactive patch mode — choose hunks to stage and commit</td>
+              <td class="td-red">No</td>
+              <td>Creating clean atomic commits from messy work sessions</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <hr>
+
+    <!-- SECTION: BRANCHING -->
+    <span class="section-anchor" id="git-branching"></span>
+    <h2 class="git-section fade-in">Branching</h2>
+    <div class="fade-in">
+      <p>Branches in Git are just <strong>movable pointers to commits</strong> — they're cheap (just 41 bytes). Creating a branch doesn't copy files. <code>HEAD</code> is a special pointer that points to the current branch (or commit in detached mode).</p>
+
+      <div class="code-wrap">
+        <div class="code-header">
+          <div class="code-meta">
+            <div class="code-dots"><div class="code-dot cd-r"></div><div class="code-dot cd-y"></div><div class="code-dot cd-g"></div></div>
+            <div class="code-lang">bash</div>
+            <div class="code-title">branch operations</div>
+          </div>
+          <button class="copy-btn" onclick="copyCode(this)">copy</button>
+        </div>
+        <pre><code class="language-bash"># ── LIST ─────────────────────────────────────────────
+git branch                  # local branches
+git branch -r               # remote-tracking branches
+git branch -a               # all (local + remote)
+git branch -v               # show last commit on each
+
+# ── CREATE ───────────────────────────────────────────
+git branch feature/login            # create branch at current HEAD
+git checkout -b feature/login       # create + switch (classic)
+git switch -c feature/login         # create + switch (modern, Git 2.23+)
+
+# ── SWITCH ───────────────────────────────────────────
+git checkout main                   # classic switch
+git switch main                     # modern (Git 2.23+)
+git checkout -                      # switch to previous branch
+
+# ── RENAME ───────────────────────────────────────────
+git branch -m old-name new-name     # rename local branch
+git branch -m new-name              # rename current branch
+
+# ── MERGE ────────────────────────────────────────────
+git checkout main
+git merge feature/login             # merge feature into main
+git merge --no-ff feature/login     # force merge commit (no fast-forward)
+git merge --squash feature/login    # squash all commits into one staged change</code></pre>
+      </div>
+    </div>
+
+    <!-- BRANCH DELETE -->
+    <span class="section-anchor" id="git-branch-delete"></span>
+    <h3 class="fade-in">Deleting a Branch</h3>
+    <div class="fade-in">
+      <p>Git has two deletion modes. The distinction matters — it prevents accidentally deleting work you haven't merged.</p>
+
+      <div class="code-wrap">
+        <div class="code-header">
+          <div class="code-meta">
+            <div class="code-dots"><div class="code-dot cd-r"></div><div class="code-dot cd-y"></div><div class="code-dot cd-g"></div></div>
+            <div class="code-lang">bash</div>
+            <div class="code-title">branch deletion</div>
+          </div>
+          <button class="copy-btn" onclick="copyCode(this)">copy</button>
+        </div>
+        <pre><code class="language-bash"># ── LOCAL BRANCH ─────────────────────────────────────
+git branch -d feature/login         # safe delete — fails if unmerged changes
+git branch -D feature/login         # force delete — ignores unmerged state
+                                    # -D is shorthand for --delete --force
+
+# ── REMOTE BRANCH ────────────────────────────────────
+git push origin --delete feature/login  # delete on GitHub/remote
+git push origin :feature/login          # alternative (old syntax)
+
+# ── CLEAN UP STALE REMOTE REFS ───────────────────────
+# After remote branches are deleted, local tracking refs go stale
+git remote prune origin             # remove stale remote-tracking refs
+git fetch --prune                   # fetch + prune in one step
+git fetch -p                        # shorthand for --prune
+
+# ── VERIFY BEFORE DELETING ───────────────────────────
+git branch --merged main            # branches fully merged into main (safe to delete)
+git branch --no-merged main         # branches with unmerged commits (be careful)</code></pre>
+      </div>
+
+      <div class="alert warning">
+        <div class="alert-icon">⚠️</div>
+        <div><strong>-d vs -D:</strong> Always try <code>-d</code> first. If Git refuses, it means there are commits on that branch not in your current branch. Use <code>git branch --no-merged</code> to review what you'd lose before using <code>-D</code>.</div>
+      </div>
+    </div>
+
+    <hr>
+
+    <!-- SECTION: REMOTE OPERATIONS -->
+    <span class="section-anchor" id="git-remote"></span>
+    <h2 class="git-section fade-in">Remote Operations</h2>
+    <div class="fade-in">
+      <div class="code-wrap">
+        <div class="code-header">
+          <div class="code-meta">
+            <div class="code-dots"><div class="code-dot cd-r"></div><div class="code-dot cd-y"></div><div class="code-dot cd-g"></div></div>
+            <div class="code-lang">bash</div>
+            <div class="code-title">remote management</div>
+          </div>
+          <button class="copy-btn" onclick="copyCode(this)">copy</button>
+        </div>
+        <pre><code class="language-bash"># ── REMOTES ──────────────────────────────────────────
+git remote -v                       # show all remotes with URLs
+git remote add origin https://github.com/org/repo.git
+git remote rename origin upstream
+git remote remove old-name
+git remote set-url origin git@github.com:org/repo.git  # change URL
+
+# ── FETCH vs PULL ─────────────────────────────────────
+git fetch origin                    # download changes, DO NOT merge
+git fetch --all                     # fetch from all remotes
+git pull                            # fetch + merge (can cause conflicts)
+git pull --rebase                   # fetch + rebase (cleaner history)
+git pull origin main                # pull specific branch
+
+# ── PUSH ──────────────────────────────────────────────
+git push                            # push current branch to tracking remote
+git push origin main                # explicit push
+git push -u origin feature/login    # set upstream + push (-u = --set-upstream)
+git push --force-with-lease         # force push, but fail if remote has new commits
+git push --force                    # DANGEROUS: overwrites remote history
+git push origin --tags              # push all tags</code></pre>
+      </div>
+
+      <div class="alert danger">
+        <div class="alert-icon">🚫</div>
+        <div><strong>git push --force on shared branches is a team incident.</strong> It rewrites history that others have based their work on. Always use <code>--force-with-lease</code> instead — it fails safely if someone else has pushed since your last fetch.</div>
+      </div>
+    </div>
+
+    <hr>
+
+    <!-- SECTION: FOLDER STRUCTURE -->
+    <span class="section-anchor" id="git-folder"></span>
+    <h2 class="git-section fade-in">Folder Structure, .gitkeep, and Tracking</h2>
+    <div class="fade-in">
+      <p>Git tracks <em>files</em>, not directories. An empty directory is invisible to Git. This is one of the most consistently surprising facts for new users.</p>
+
+      <div class="alert info">
+        <div class="alert-icon">ℹ️</div>
+        <div><strong>The fundamental rule:</strong> Git will never commit an empty directory. If you need a directory to exist in the repo (for CI, build systems, or project structure), you need at least one file in it.</div>
+      </div>
+
+      <span class="section-anchor" id="git-gitkeep"></span>
+      <h3>The .gitkeep Convention</h3>
+      <p><code>.gitkeep</code> is not a Git feature — it's a community convention. It's an empty (or near-empty) file whose only purpose is to make Git track the directory containing it. The name doesn't matter; <code>.gitkeep</code> is the standard.</p>
+
+      <div class="code-wrap">
+        <div class="code-header">
+          <div class="code-meta">
+            <div class="code-dots"><div class="code-dot cd-r"></div><div class="code-dot cd-y"></div><div class="code-dot cd-g"></div></div>
+            <div class="code-lang">bash</div>
+            <div class="code-title">preserving empty directories</div>
+          </div>
+          <button class="copy-btn" onclick="copyCode(this)">copy</button>
+        </div>
+        <pre><code class="language-bash"># Create empty directories with a placeholder file
+mkdir -p logs tmp uploads/profile_images
+
+# Add .gitkeep to preserve each empty directory
+touch logs/.gitkeep
+touch tmp/.gitkeep
+touch uploads/profile_images/.gitkeep
+
+# Stage and commit
+git add logs/.gitkeep tmp/.gitkeep uploads/profile_images/.gitkeep
+git commit -m "chore: preserve directory structure with .gitkeep"
+
+# If the directory has actual files later, .gitkeep is still harmless
+# Some teams add a .gitignore instead (to ignore dir contents but keep the dir):
+echo "*" > logs/.gitignore
+echo "!.gitignore" >> logs/.gitignore
+git add logs/.gitignore
+git commit -m "chore: track logs/ dir, ignore its contents"</code></pre>
+      </div>
+
+      <h3>Adding and Removing Directories</h3>
+      <div class="code-wrap">
+        <div class="code-header">
+          <div class="code-meta">
+            <div class="code-dots"><div class="code-dot cd-r"></div><div class="code-dot cd-y"></div><div class="code-dot cd-g"></div></div>
+            <div class="code-lang">bash</div>
+            <div class="code-title">directory management</div>
+          </div>
+          <button class="copy-btn" onclick="copyCode(this)">copy</button>
+        </div>
+        <pre><code class="language-bash"># ── ADDING A DIRECTORY TREE ──────────────────────────
+mkdir -p src/components/auth
+touch src/components/auth/LoginForm.jsx
+git add src/components/auth/           # add entire subdirectory
+git commit -m "feat: add auth component structure"
+
+# ── REMOVING A DIRECTORY FROM GIT + DISK ─────────────
+git rm -r src/old-module/              # removes from tracking + deletes locally
+git commit -m "chore: remove deprecated old-module"
+
+# ── REMOVING A DIRECTORY FROM GIT ONLY (keep locally) ─
+git rm -r --cached src/generated/      # remove from tracking, keep on disk
+echo "src/generated/" >> .gitignore    # prevent re-adding
+git commit -m "chore: stop tracking generated output"
+
+# ── RENAME/MOVE A DIRECTORY ───────────────────────────
+git mv src/utils src/helpers            # preserves history
+git commit -m "refactor: rename utils → helpers"
+
+# ── CHECK WHAT'S TRACKED ──────────────────────────────
+git ls-files                            # all tracked files
+git ls-files src/                       # tracked files in subdirectory
+git ls-files --others --exclude-standard  # untracked files (respects .gitignore)</code></pre>
+      </div>
+
+      <h3>Typical Repository Structure</h3>
+      <div class="file-tree fade-in">
+        <span class="ft-dir">my-project/</span><br>
+        ├── <span class="ft-ignore">.git/</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="ft-comment"># git object database — never edit manually</span><br>
+        ├── <span class="ft-ignore">.gitignore</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="ft-comment"># patterns git should never track</span><br>
+        ├── <span class="ft-ignore">.gitattributes</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="ft-comment"># line endings, diff drivers, linguist</span><br>
+        ├── <span class="ft-file">README.md</span><br>
+        ├── <span class="ft-dir">src/</span><br>
+        │&nbsp;&nbsp;&nbsp;├── <span class="ft-dir">components/</span><br>
+        │&nbsp;&nbsp;&nbsp;└── <span class="ft-dir">utils/</span><br>
+        ├── <span class="ft-dir">tests/</span><br>
+        ├── <span class="ft-dir">docs/</span><br>
+        ├── <span class="ft-dir">logs/</span><br>
+        │&nbsp;&nbsp;&nbsp;└── <span class="ft-keep">.gitkeep</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="ft-comment"># keeps empty logs/ tracked</span><br>
+        ├── <span class="ft-dir">tmp/</span><br>
+        │&nbsp;&nbsp;&nbsp;└── <span class="ft-keep">.gitkeep</span><br>
+        ├── <span class="ft-file">.env.example</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="ft-comment"># template — COMMIT this</span><br>
+        ├── <span class="ft-secret">.env</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="ft-comment"># real secrets — NEVER commit (in .gitignore)</span><br>
+        ├── <span class="ft-file">package.json</span><br>
+        └── <span class="ft-dir">node_modules/</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="ft-comment"># NEVER commit (in .gitignore)</span>
+      </div>
+    </div>
+
+    <hr>
+
+    <!-- SECTION: GITIGNORE -->
+    <span class="section-anchor" id="git-gitignore"></span>
+    <h2 class="git-section fade-in">.gitignore — What Not to Track</h2>
+    <div class="fade-in">
+      <p><code>.gitignore</code> tells Git which files and patterns to never track. It does <em>not</em> retroactively un-track files that are already committed — for that, you need <code>git rm --cached</code>.</p>
+
+      <div class="code-wrap">
+        <div class="code-header">
+          <div class="code-meta">
+            <div class="code-dots"><div class="code-dot cd-r"></div><div class="code-dot cd-y"></div><div class="code-dot cd-g"></div></div>
+            <div class="code-lang">gitignore</div>
+            <div class="code-title">.gitignore — comprehensive example</div>
+          </div>
+          <button class="copy-btn" onclick="copyCode(this)">copy</button>
+        </div>
+        <pre><code class="language-bash"># ── SECRETS & CREDENTIALS ─────────────────────────────
+.env
+.env.*
+!.env.example         # Exception: template is safe to commit
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa
+id_ed25519
+*_rsa
+*credentials*
+*secret*
+aws_credentials
+.aws/credentials
+.netrc
+
+# ── DEPENDENCY DIRECTORIES ────────────────────────────
+node_modules/
+vendor/
+.venv/
+venv/
+env/
+__pycache__/
+*.pyc
+
+# ── BUILD & GENERATED OUTPUT ──────────────────────────
+dist/
+build/
+out/
+.next/
+target/
+*.class
+*.o
+*.a
+*.so
+*.dll
+
+# ── LOGS & TEMP ───────────────────────────────────────
+logs/
+*.log
+tmp/
+temp/
+.tmp/
+*.swp
+*.swo
+
+# ── IDE & OS ARTIFACTS ────────────────────────────────
+.vscode/
+.idea/
+*.iml
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── COVERAGE & TEST ARTIFACTS ─────────────────────────
+coverage/
+.nyc_output/
+.pytest_cache/
+*.coverage
+
+# ── PATTERN SYNTAX REFERENCE ─────────────────────────
+# *.txt        match all .txt files anywhere
+# /TODO        match only at root
+# build/       match directory named "build" anywhere
+# !important/  exception: do track this despite above rule
+# doc/**/*.pdf match pdfs in doc and any subdirectory</code></pre>
+      </div>
+
+      <div class="code-wrap">
+        <div class="code-header">
+          <div class="code-meta">
+            <div class="code-dots"><div class="code-dot cd-r"></div><div class="code-dot cd-y"></div><div class="code-dot cd-g"></div></div>
+            <div class="code-lang">bash</div>
+            <div class="code-title">debugging .gitignore</div>
+          </div>
+          <button class="copy-btn" onclick="copyCode(this)">copy</button>
+        </div>
+        <pre><code class="language-bash"># Check why a file IS or ISN'T being ignored
+git check-ignore -v .env            # shows which rule matches
+git check-ignore -v node_modules/   # shows rule + file
+
+# Check if a file is tracked despite being in .gitignore
+git ls-files | grep ".env"          # if output: file is still tracked
+
+# Fix: stop tracking a file that's in .gitignore
+git rm --cached .env                # stop tracking (keeps local file)
+git commit -m "fix: stop tracking .env"
+
+# .gitignore scopes:
+# .gitignore           tracked in repo, shared with team
+# .git/info/exclude    local-only, not committed (personal ignores)
+# core.excludesFile    global per user (~/.gitignore_global)
+
+# Add a global gitignore for OS/IDE artifacts
+git config --global core.excludesFile ~/.gitignore_global
+echo ".DS_Store" >> ~/.gitignore_global
+echo "*.swp"    >> ~/.gitignore_global</code></pre>
+      </div>
+
+      <div class="alert danger">
+        <div class="alert-icon">🚨</div>
+        <div><strong>The most important rule:</strong> Adding a file to <code>.gitignore</code> after it has already been committed does nothing. The file remains in history and continues to be tracked. You must <code>git rm --cached &lt;file&gt;</code> to remove it from tracking — and rewrite history if it contained a secret.</div>
+      </div>
+    </div>
+
+    <hr>
+
+    <!-- SECTION: UNDO & FIX -->
+    <span class="section-anchor" id="git-undo"></span>
+    <h2 class="git-section fade-in">Undo, Reset, and Revert</h2>
+    <div class="fade-in">
+      <p>Git has multiple ways to "undo" and they're fundamentally different. Choosing the wrong one is one of the most common team incidents.</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Command</th><th>What it undoes</th><th>Changes history?</th><th>Safe on shared branch?</th></tr></thead>
+          <tbody>
+            <tr>
+              <td class="td-mono">git restore &lt;file&gt;</td>
+              <td>Unstaged working tree changes (since last commit or staged state)</td>
+              <td class="td-green">No</td>
+              <td class="td-green">Yes</td>
+            </tr>
+            <tr>
+              <td class="td-mono">git restore --staged</td>
+              <td>Removes file from staging area (keeps working tree change)</td>
+              <td class="td-green">No</td>
+              <td class="td-green">Yes</td>
+            </tr>
+            <tr>
+              <td class="td-mono">git reset --soft HEAD~1</td>
+              <td>Undoes last commit; keeps changes staged</td>
+              <td class="td-red">Yes</td>
+              <td class="td-red">No</td>
+            </tr>
+            <tr>
+              <td class="td-mono">git reset --mixed HEAD~1</td>
+              <td>Undoes last commit; keeps changes in working tree (default)</td>
+              <td class="td-red">Yes</td>
+              <td class="td-red">No</td>
+            </tr>
+            <tr>
+              <td class="td-mono">git reset --hard HEAD~1</td>
+              <td>Undoes commit AND discards all changes — data loss if not careful</td>
+              <td class="td-red">Yes</td>
+              <td class="td-red">No</td>
+            </tr>
+            <tr>
+              <td class="td-mono">git revert &lt;sha&gt;</td>
+              <td>Creates a new commit that reverses a previous commit's changes</td>
+              <td class="td-green">No (adds commit)</td>
+              <td class="td-green">Yes — preferred</td>
+            </tr>
+            <tr>
+              <td class="td-mono">git commit --amend</td>
+              <td>Replace last commit with a new one (different content or message)</td>
+              <td class="td-red">Yes</td>
+              <td class="td-red">No (unless not pushed)</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="code-wrap">
+        <div class="code-header">
+          <div class="code-meta">
+            <div class="code-dots"><div class="code-dot cd-r"></div><div class="code-dot cd-y"></div><div class="code-dot cd-g"></div></div>
+            <div class="code-lang">bash</div>
+            <div class="code-title">undo operations</div>
+          </div>
+          <button class="copy-btn" onclick="copyCode(this)">copy</button>
+        </div>
+        <pre><code class="language-bash"># Discard changes in working tree (permanent — no recovery)
+git restore README.md               # restore one file from last commit
+git restore .                       # restore all (careful!)
+
+# Undo last commit — keep work staged (useful: fix message or add file)
+git reset --soft HEAD~1
+
+# Undo last commit — keep work in working tree (most flexible)
+git reset --mixed HEAD~1            # or just: git reset HEAD~1
+
+# Undo last N commits and discard everything
+git reset --hard HEAD~3             # ⚠ data loss — can't recover easily
+
+# Safe undo on a shared branch (creates a new "undo" commit)
+git revert HEAD                     # revert most recent commit
+git revert abc1234                  # revert specific commit by SHA
+git revert HEAD~3..HEAD             # revert last 3 commits (creates 3 revert commits)
+
+# Rescue "lost" commits after hard reset
+git reflog                          # shows all HEAD movements with SHAs
+git checkout <sha-from-reflog>      # recover a specific state
+git reset --hard <sha-from-reflog>  # restore branch to that point</code></pre>
+      </div>
+    </div>
+
+    <hr>
+
+    <!-- SECTION: STASH & TAGS -->
+    <span class="section-anchor" id="git-stash"></span>
+    <h2 class="git-section fade-in">Stash, Tags &amp; Advanced Inspection</h2>
+    <div class="fade-in">
+      <div class="code-wrap">
+        <div class="code-header">
+          <div class="code-meta">
+            <div class="code-dots"><div class="code-dot cd-r"></div><div class="code-dot cd-y"></div><div class="code-dot cd-g"></div></div>
+            <div class="code-lang">bash</div>
+            <div class="code-title">stash, tags, log, diff</div>
+          </div>
+          <button class="copy-btn" onclick="copyCode(this)">copy</button>
+        </div>
+        <pre><code class="language-bash"># ── STASH ──────────────────────────────────────────────
+git stash                           # stash tracked changes
+git stash -u                        # stash including untracked files
+git stash push -m "wip: auth refactor"  # stash with label
+git stash list                      # show all stashes
+git stash pop                       # apply most recent stash + remove it
+git stash apply stash@{2}           # apply specific stash, keep it in list
+git stash drop stash@{0}            # delete a stash
+git stash clear                     # delete ALL stashes (irreversible)
+git stash show -p stash@{0}         # diff of what's in a stash
+
+# ── TAGS ───────────────────────────────────────────────
+git tag                             # list all tags
+git tag v1.2.0                      # lightweight tag at HEAD
+git tag -a v1.2.0 -m "Release 1.2.0"   # annotated tag (preferred — stores metadata)
+git tag -a v1.2.0 abc1234 -m "Tag old commit"  # tag a specific commit
+git push origin v1.2.0              # push specific tag
+git push origin --tags              # push all tags
+git tag -d v1.2.0                   # delete local tag
+git push origin --delete v1.2.0     # delete remote tag
+
+# ── INSPECTION ─────────────────────────────────────────
+git log                             # full history
+git log --oneline                   # one line per commit
+git log --oneline --graph --all     # visual branch graph
+git log -p                          # log with diffs
+git log --author="Harsha"           # filter by author
+git log --since="2 weeks ago"       # filter by date
+git log --grep="security"           # filter by commit message keyword
+git log -- src/auth.py              # history of a specific file
+
+git diff                            # unstaged changes
+git diff --staged                   # staged changes vs last commit
+git diff main..feature/login        # diff between branches
+git diff HEAD~3 HEAD -- src/        # what changed in a directory over 3 commits
+
+git blame src/auth.py               # who changed each line and when
+git show abc1234                    # show a specific commit
+git show HEAD:src/auth.py           # show file at specific commit</code></pre>
+      </div>
+    </div>
+
+    <hr>
+
+    <!-- SECTION: COMMON CHALLENGES -->
+    <span class="section-anchor" id="git-challenges"></span>
+    <h2 class="git-section fade-in">Common Challenges People Face</h2>
+    <div class="fade-in">
+      <div class="mistake-list">
+        <div class="mistake-item">
+          <div class="mistake-icon">💥</div>
+          <div class="mistake-body">
+            <div class="mistake-title">Merge Conflicts</div>
+            <div class="mistake-desc">Two branches modified the same lines. Git can't auto-resolve and marks the file with conflict markers (<code>&lt;&lt;&lt;&lt;&lt;&lt;&lt;</code>, <code>=======</code>, <code>&gt;&gt;&gt;&gt;&gt;&gt;&gt;</code>). Beginners panic and force-push, destroying collaborators' work.</div>
+            <div class="mistake-fix">Fix: Open conflicted files, edit to keep the correct version, delete markers, then <code>git add &lt;file&gt; &amp;&amp; git commit</code>. Use <code>git mergetool</code> or VS Code for visual resolution. Never <code>git push --force</code>.</div>
+          </div>
+        </div>
+        <div class="mistake-item">
+          <div class="mistake-icon">🔓</div>
+          <div class="mistake-body">
+            <div class="mistake-title">Detached HEAD State</div>
+            <div class="mistake-desc">Happens when you checkout a specific commit SHA instead of a branch name. HEAD no longer points to a branch — commits made here will be "orphaned" and garbage-collected unless you create a branch.</div>
+            <div class="mistake-fix">Fix: If you're just browsing: <code>git switch main</code>. If you made commits you want to keep: <code>git switch -c new-branch-name</code> before switching away.</div>
+          </div>
+        </div>
+        <div class="mistake-item">
+          <div class="mistake-icon">📜</div>
+          <div class="mistake-body">
+            <div class="mistake-title">Accidentally Committed to main</div>
+            <div class="mistake-desc">Common when forgetting to create a feature branch. The commit exists on main and may have been pushed.</div>
+            <div class="mistake-fix">Not pushed: <code>git branch feature/oops &amp;&amp; git reset --hard HEAD~1</code>. Already pushed: <code>git revert HEAD</code> (safe for shared branches) then create the feature branch.</div>
+          </div>
+        </div>
+        <div class="mistake-item">
+          <div class="mistake-icon">📦</div>
+          <div class="mistake-body">
+            <div class="mistake-title">Committed node_modules / Build Artifacts</div>
+            <div class="mistake-desc">Added large generated directories before writing a proper <code>.gitignore</code>. Repo becomes enormous. Slow clone, slow CI.</div>
+            <div class="mistake-fix"><code>git rm -r --cached node_modules/ &amp;&amp; echo 'node_modules/' &gt;&gt; .gitignore &amp;&amp; git commit -m "fix: stop tracking node_modules"</code>. For history cleanup, use <code>git-filter-repo</code>.</div>
+          </div>
+        </div>
+        <div class="mistake-item">
+          <div class="mistake-icon">🔄</div>
+          <div class="mistake-body">
+            <div class="mistake-title">Rebase vs Merge Confusion</div>
+            <div class="mistake-desc"><code>git merge</code> creates a merge commit preserving both branch histories. <code>git rebase</code> replays your commits on top of the target, rewriting SHAs — producing a linear history but breaking anyone else's branch based on the original commits.</div>
+            <div class="mistake-fix">Rule of thumb: rebase your local feature branch onto main before merging (keeps history clean). Never rebase a branch that others are working from.</div>
+          </div>
+        </div>
+        <div class="mistake-item">
+          <div class="mistake-icon">🚨</div>
+          <div class="mistake-body">
+            <div class="mistake-title">Pushed a Secret / Credential</div>
+            <div class="mistake-desc">The most critical mistake. Once pushed — even briefly — the secret must be treated as compromised. GitHub bots scan the public event stream in under 30 seconds.</div>
+            <div class="mistake-fix">Immediately rotate the credential at the provider. Then follow the Incident Response section below. History cleanup alone is insufficient.</div>
+          </div>
+        </div>
+        <div class="mistake-item">
+          <div class="mistake-icon">🌀</div>
+          <div class="mistake-body">
+            <div class="mistake-title">git pull Causing Unexpected Merges</div>
+            <div class="mistake-desc"><code>git pull</code> is <code>git fetch + git merge</code>. When your local branch has diverged from remote, this creates a merge commit. In a team environment, this produces messy history and confusing commit graphs.</div>
+            <div class="mistake-fix">Use <code>git pull --rebase</code> to keep linear history. Set globally: <code>git config --global pull.rebase true</code>. Or always fetch first and choose your integration strategy explicitly.</div>
+          </div>
+        </div>
+        <div class="mistake-item">
+          <div class="mistake-icon">🔑</div>
+          <div class="mistake-body">
+            <div class="mistake-title">Wrong Remote URL (HTTPS vs SSH)</div>
+            <div class="mistake-desc">Authentication errors on push/pull are often caused by using HTTPS remote URL but only having SSH key configured, or vice versa.</div>
+            <div class="mistake-fix"><code>git remote set-url origin git@github.com:org/repo.git</code> (SSH) or use HTTPS with a credential manager / PAT token.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <hr>
+
+    <!-- ══════════════════════════════════════════
+         MODULE 2: GITHUB SECRETS & SECURITY
+    ══════════════════════════════════════════ -->
+
+    <!-- HOW SECRETS LEAK -->
+    <span class="section-anchor" id="how-secrets-leak"></span>
+    <h2 class="sec-section fade-in">How Secrets Actually Leak</h2>
+    <div class="fade-in">
+      <p>Secrets end up in git rarely through carelessness — almost always through <strong>workflow gaps</strong>. The most common patterns:</p>
       <ul>
-        <li><strong><code>.env</code> not in <code>.gitignore</code></strong> — A developer creates a <code>.env</code> file, adds real credentials, and commits it before anyone adds <code>.gitignore</code>. Every subsequent commit now carries that file in history.</li>
-        <li><strong>Hardcoded during "quick testing"</strong> — <code>API_KEY = "sk-real-key-here"</code> gets committed "just to test this one thing." The test passes. The cleanup commit never happens.</li>
-        <li><strong>Secrets in GitHub Actions workflow files</strong> — Especially common when migrating from another CI system where secrets were just environment variables in a YAML file.</li>
-        <li><strong>Repository visibility change</strong> — An internal tool repo gets open-sourced. No one audited git history first. Years of credentials are now public.</li>
-        <li><strong>Accidental fork or template creation</strong> — Forking a private repo to a personal account, where the fork is public by default.</li>
-        <li><strong>Third-party integrations</strong> — Some older tools (certain deploy systems, legacy Heroku configs) stored their configuration in git-tracked files.</li>
+        <li><strong><code>.env</code> not in <code>.gitignore</code></strong> — Developer creates credentials file, commits before <code>.gitignore</code> is written. Every subsequent commit carries it in history even after deletion.</li>
+        <li><strong>Hardcoded "just for testing"</strong> — <code>API_KEY = "sk-real-key-here"</code> committed to test a flow. The test passes. The cleanup never happens.</li>
+        <li><strong>Secrets in Actions YAML</strong> — Migrating from another CI system where secrets were just environment variables in config files.</li>
+        <li><strong>Repository visibility change</strong> — Private tool repo made public. No history audit. Years of credentials exposed instantly.</li>
+        <li><strong>Accidental fork to personal account</strong> — Where the fork defaults to public visibility.</li>
       </ul>
 
-      <p><strong>What happens after exposure — the timeline:</strong></p>
       <div class="table-wrap">
-        <table class="timeline">
+        <table>
           <thead><tr><th>Time after exposure</th><th>What has happened</th></tr></thead>
           <tbody>
-            <tr><td>&lt; 5 seconds</td><td>GitHub's public event stream picks up the repo/push</td></tr>
-            <tr><td>5–30 seconds</td><td>Automated scrapers clone the repo and extract files</td></tr>
-            <tr><td>30–120 seconds</td><td>Credential strings are extracted and tested against the API</td></tr>
-            <tr><td>2–10 minutes</td><td>Valid credentials are being actively used</td></tr>
-            <tr><td>1–24 hours</td><td>Full exploitation — mining, data exfiltration, lateral movement</td></tr>
+            <tr><td class="td-red">&lt; 5 seconds</td><td>GitHub public event stream picks up the push</td></tr>
+            <tr><td class="td-red">5–30 seconds</td><td>Automated scrapers clone the repo and extract files</td></tr>
+            <tr><td class="td-red">30–120 seconds</td><td>Credential strings extracted and tested against live APIs</td></tr>
+            <tr><td class="td-red">2–10 minutes</td><td>Valid credentials actively used (miner deployments, data exfil starts)</td></tr>
+            <tr><td class="td-yellow">1–24 hours</td><td>Full exploitation — crypto mining, lateral movement, data exfiltration complete</td></tr>
           </tbody>
         </table>
       </div>
-      <p>This is why "I noticed in 30 seconds and made it private" is not a safety net. You are reacting to an event that the attacker's automation already won.</p>
+      <p>"I noticed in 30 seconds and made it private" is <strong>not a safety net</strong>. Automated infrastructure already won before you reacted.</p>
 
-      <p><strong>Real-world consequences by secret type:</strong></p>
+      <h4>Blast radius by secret type</h4>
       <ul>
-        <li><strong>AWS keys</strong> — Immediately used to launch crypto mining EC2 instances. Bills of $50,000+ in under 24 hours are documented cases.</li>
-        <li><strong>Database credentials</strong> — Exfiltration of all customer data, potential ransomware on the DB.</li>
-        <li><strong>GitHub tokens</strong> — Used to clone all private repositories in your organization, exfiltrating your entire codebase.</li>
-        <li><strong>Stripe / payment keys</strong> — Fraudulent charges, refund abuse, or resale of the key on dark web marketplaces.</li>
-        <li><strong>Twilio / SendGrid keys</strong> — Mass spam campaigns billed to your account.</li>
-        <li><strong>SSH keys</strong> — Backdoor access to every server the key is deployed on.</li>
+        <li><strong>AWS keys</strong> — EC2 crypto mining. Documented cases: $50,000+ billing in under 24 hours.</li>
+        <li><strong>Database credentials</strong> — Full customer data exfiltration, potential ransomware.</li>
+        <li><strong>GitHub tokens</strong> — Clone of every private repo in your org. Complete codebase theft.</li>
+        <li><strong>Stripe/payment keys</strong> — Fraudulent charges, refund abuse, dark web resale.</li>
+        <li><strong>Twilio/SendGrid</strong> — Mass spam campaigns billed to your account.</li>
+        <li><strong>SSH private keys</strong> — Persistent backdoor on every server the key authorises.</li>
       </ul>
     </div>
 
     <hr>
 
-    <!-- SECTION: DEFENSE IN DEPTH -->
+    <!-- DEFENSE IN DEPTH -->
     <span class="section-anchor" id="defense-in-depth"></span>
-    <h2 class="fade-in">The Defense-in-Depth Model</h2>
+    <h2 class="sec-section fade-in">Defense-in-Depth Model</h2>
     <div class="fade-in">
-      <p>Security for secrets isn't a single control — it's overlapping layers. Each layer catches what the previous one misses. Think of it as five gates:</p>
-      <div class="defense-diagram">
-        <div class="defense-layer"><div class="layer-box">[ Your machine ]</div></div>
-        <div class="defense-layer" style="padding-left:2rem">
-          <div class="layer-connector">
-            <div class="layer-arrow">↓</div>
-            <div class="layer-label">Layer 1: pre-commit hook (gitleaks, detect-secrets)</div>
-          </div>
-        </div>
-        <div class="defense-layer"><div class="layer-box">[ git commit ]</div></div>
-        <div class="defense-layer" style="padding-left:2rem">
-          <div class="layer-connector">
-            <div class="layer-arrow">↓</div>
-            <div class="layer-label">Layer 2: .gitignore, code review, .env.example pattern</div>
-          </div>
-        </div>
-        <div class="defense-layer"><div class="layer-box">[ git push ]</div></div>
-        <div class="defense-layer" style="padding-left:2rem">
-          <div class="layer-connector">
-            <div class="layer-arrow">↓</div>
-            <div class="layer-label">Layer 3: GitHub push protection, secret scanning</div>
-          </div>
-        </div>
-        <div class="defense-layer"><div class="layer-box">[ Remote repository ]</div></div>
-        <div class="defense-layer" style="padding-left:2rem">
-          <div class="layer-connector">
-            <div class="layer-arrow">↓</div>
-            <div class="layer-label">Layer 4: repo visibility policy, branch protection, CI scan</div>
-          </div>
-        </div>
-        <div class="defense-layer"><div class="layer-box">[ Public internet ]</div></div>
-        <div class="defense-layer" style="padding-left:2rem">
-          <div class="layer-connector">
-            <div class="layer-arrow">↓</div>
-            <div class="layer-label">Layer 5: OIDC, short-lived credentials, least privilege, secrets manager</div>
-          </div>
-        </div>
-        <div class="defense-layer"><div class="layer-box">[ Cloud / services ]</div></div>
+      <p>No single control is sufficient. Each layer catches what the previous misses.</p>
+
+      <div class="did-wrap">
+        <div class="did-layer"><div class="did-node">[ Your machine ]</div><div style="flex:1"></div></div>
+        <div class="did-layer"><div class="did-gap"><div class="did-vert"></div></div><div class="did-connector"><div class="did-arrow">↓</div><div class="did-label">Layer 1 — pre-commit hook: gitleaks / detect-secrets</div></div></div>
+        <div class="did-layer"><div class="did-node highlight" style="border-color:var(--blue);color:var(--blue)">[ git commit ]</div><div style="flex:1"></div></div>
+        <div class="did-layer"><div class="did-gap"><div class="did-vert"></div></div><div class="did-connector"><div class="did-arrow">↓</div><div class="did-label">.gitignore, code review, .env.example pattern</div></div></div>
+        <div class="did-layer"><div class="did-node">[ git push ]</div><div style="flex:1"></div></div>
+        <div class="did-layer"><div class="did-gap"><div class="did-vert"></div></div><div class="did-connector"><div class="did-arrow">↓</div><div class="did-label">Layer 2 — GitHub Push Protection, Secret Scanning</div></div></div>
+        <div class="did-layer"><div class="did-node">[ Remote repo ]</div><div style="flex:1"></div></div>
+        <div class="did-layer"><div class="did-gap"><div class="did-vert"></div></div><div class="did-connector"><div class="did-arrow">↓</div><div class="did-label">Visibility policy, branch protection, CI scan (Gitleaks CI)</div></div></div>
+        <div class="did-layer"><div class="did-node">[ Public internet ]</div><div style="flex:1"></div></div>
+        <div class="did-layer"><div class="did-gap"><div class="did-vert"></div></div><div class="did-connector"><div class="did-arrow">↓</div><div class="did-label">Layer 3 — OIDC, short-lived creds, least-privilege, secrets manager</div></div></div>
+        <div class="did-layer"><div class="did-node green" style="border-color:var(--green);color:var(--green)">[ Cloud / Services ]</div><div style="flex:1"></div></div>
       </div>
-      <p>The goal is that a secret never reaches the next layer down. But if it does — you have a control there too. No single layer is sufficient. All of them together make a breach very unlikely and, if it happens, the blast radius small.</p>
     </div>
 
     <hr>
 
-    <!-- SECTION: INCIDENT RESPONSE -->
+    <!-- INCIDENT RESPONSE -->
     <span class="section-anchor" id="incident-response"></span>
-    <h2 class="fade-in">Incident Response — What to Do Right Now</h2>
+    <h2 class="sec-section fade-in">Incident Response Playbook <span class="h2-pill cl-r">CRITICAL</span></h2>
     <div class="fade-in">
-      <p>If you are here because an exposure just happened: <strong>do not panic, and do not skip steps</strong>. The order matters.</p>
-
-      <h3>Step 1 — Rotate immediately, before anything else</h3>
-      <p>Every exposed credential must be treated as <strong>fully compromised from the moment of exposure</strong>. Do not wait to check logs first. Do not wait to confirm it was scraped. Assume it was, and act accordingly.</p>
-      <ul>
-        <li><strong>AWS access keys</strong>: IAM Console → Users → Security credentials → Deactivate the exposed key → Create new key pair → Update all systems using the old key → Delete the old key. Don't just deactivate — delete it.</li>
-        <li><strong>GitHub Personal Access Tokens</strong>: Settings → Developer Settings → Personal Access Tokens → Revoke.</li>
-        <li><strong>GitHub Actions secrets</strong>: Repository Settings → Secrets and variables → Actions → Update the secret value.</li>
-        <li><strong>Database passwords</strong>: Change immediately via your DB console or CLI. Also audit whether the database is publicly network-accessible — if so, restrict it to your application's IP range immediately.</li>
-        <li><strong>Third-party API keys</strong> (Stripe, Twilio, SendGrid, etc.): Each has a "roll key" or "revoke" option in their dashboard. Do it immediately, then update your secrets store with the new value.</li>
-        <li><strong>SSH keys</strong>: Remove the compromised key from <code>~/.ssh/authorized_keys</code> on every server it was deployed to. Remove from GitHub under Settings → SSH and GPG keys.</li>
-      </ul>
-      <div class="alert-warning">
-        <strong>The rule:</strong> Rotate first, investigate second. Rotation takes minutes. A breach investigation and remediation takes weeks.
+      <div class="alert-emergency">
+        <div class="alert-emergency-icon">🔴</div>
+        <div class="alert-emergency-body">
+          <div class="alert-emergency-title">Time is your enemy. Every minute increases blast radius.</div>
+          <div class="alert-emergency-desc">Execute these steps in order. Do not skip to "clean history" — that comes after containment.</div>
+        </div>
       </div>
 
-      <h3>Step 2 — Set the repository to private</h3>
-      <p>If the repo is still public, make it private immediately. This stops new exposure from ongoing scraping but does not undo existing exposure.</p>
-      <p><strong>Log the exact timestamps</strong>: when the repo became public, when you noticed, when you set it private. You will need this for the audit and potentially for compliance reporting.</p>
+      <div class="ir-timeline">
 
-      <h3>Step 3 — Audit access logs for abuse</h3>
-      <p>Now that rotation is done, investigate what happened during the exposure window.</p>
-      <ul>
-        <li><strong>AWS CloudTrail</strong>: Filter by the IAM user/role attached to the exposed key. Look for <code>AssumeRole</code>, EC2 <code>RunInstances</code>, S3 <code>GetObject</code>/<code>PutObject</code>, Lambda <code>CreateFunction</code>, or IAM <code>CreateUser</code> — all classic post-compromise actions. Check AWS Cost Explorer for sudden spikes in EC2 or Lambda spend.</li>
-        <li><strong>GCP</strong>: Cloud Audit Logs → filter by the service account.</li>
-        <li><strong>Azure</strong>: Azure Monitor → Activity Log.</li>
-        <li><strong>GitHub audit log</strong>: Settings → Security log — look for OAuth app grants, new SSH keys, or private repo access from unfamiliar IPs.</li>
-        <li><strong>Third-party services</strong>: Check each service's own event or activity log for anomalous API calls during the exposure window.</li>
-      </ul>
-      <p>If you find evidence of abuse, escalate to your security team and preserve logs — they are evidence.</p>
+        <span class="section-anchor" id="ir-step1"></span>
+        <div class="ir-step critical">
+          <div class="ir-step-num">1</div>
+          <div class="ir-step-body">
+            <div class="ir-step-title">Rotate the exposed credential immediately <span class="ir-step-timer">T+0 min — NOW</span></div>
+            <p>Do not attempt to clean Git history first. The credential is compromised the moment it was public. History cleanup without rotation means the attacker still has a working key.</p>
+            <ul>
+              <li><strong>AWS IAM key:</strong> IAM Console → Users → Security credentials → <strong>Delete</strong> the key (not just deactivate). Create a new one. Update all systems using it.</li>
+              <li><strong>GitHub Personal Access Token:</strong> Settings → Developer settings → Personal access tokens → Revoke. Generate a replacement with minimum required scopes.</li>
+              <li><strong>Database password:</strong> ALTER USER or equivalent on your DB. Update connection strings in all environments and deployments.</li>
+              <li><strong>Stripe / payment keys:</strong> Stripe Dashboard → Developers → API Keys → Roll secret key.</li>
+              <li><strong>OAuth client secret:</strong> Regenerate in the provider's developer console. All existing OAuth sessions may be invalidated.</li>
+            </ul>
+            <div class="alert danger" style="margin-top:1rem; margin-bottom:0">
+              <div class="alert-icon">🚨</div>
+              <div><strong>Delete, do not deactivate.</strong> Deactivated keys can be re-activated. Delete and create fresh credentials.</div>
+            </div>
+          </div>
+        </div>
 
-      <h3>Step 4 — Purge the secret from git history</h3>
-      <p>See the dedicated section: <a href="#removing-history">Removing Secrets from Git History</a>. Do this after rotation — not instead of it.</p>
+        <span class="section-anchor" id="ir-step2"></span>
+        <div class="ir-step critical">
+          <div class="ir-step-num">2</div>
+          <div class="ir-step-body">
+            <div class="ir-step-title">Contain the exposure <span class="ir-step-timer">T+2 min</span></div>
+            <ul>
+              <li>Make the repository private if it's currently public.</li>
+              <li>Invalidate all active sessions and OAuth tokens issued using the exposed secret.</li>
+              <li>If a GitHub token was exposed: revoke all personal access tokens for the account and rotate SSH keys if also present.</li>
+              <li>If an AWS key was exposed: immediately add an explicit <code>Deny *</code> policy to the compromised IAM user while you investigate.</li>
+            </ul>
+            <div class="code-wrap" style="margin-top:0.75rem">
+              <div class="code-header">
+                <div class="code-meta">
+                  <div class="code-dots"><div class="code-dot cd-r"></div><div class="code-dot cd-y"></div><div class="code-dot cd-g"></div></div>
+                  <div class="code-lang">bash</div>
+                  <div class="code-title">AWS — emergency deny policy</div>
+                </div>
+                <button class="copy-btn" onclick="copyCode(this)">copy</button>
+              </div>
+              <pre><code class="language-bash"># Identify which IAM entity the key belongs to
+aws sts get-caller-identity --profile compromised-key
 
-      <h3>Step 5 — Notify and document</h3>
-      <ul>
-        <li><strong>Internally</strong>: Notify your security team and engineering lead, even if you believe no abuse occurred. Document the full timeline.</li>
-        <li><strong>Compliance</strong>: If any regulated data (PII, PHI, financial records, PCI data) may have been accessible via the exposed credential, check your legal obligations. GDPR, HIPAA, and PCI-DSS all have breach notification requirements with short windows.</li>
-        <li><strong>Affected users</strong>: If there's any chance customer data was accessed, follow your organization's incident communication policy.</li>
-      </ul>
+# Attach an emergency inline deny-all policy to the user
+aws iam put-user-policy \
+  --user-name COMPROMISED_USER \
+  --policy-name EMERGENCY_DENY \
+  --policy-document '{"Version":"2012-10-17","Statement":[{"Effect":"Deny","Action":"*","Resource":"*"}]}'
 
-      <h3>Step 6 — Post-incident hardening</h3>
-      <p>Once the incident is resolved, implement the controls in <a href="#preventive-controls">Preventive Controls</a>. Run a full historical audit on all other repositories in your organization.</p>
-    </div>
+# Then immediately delete the key
+aws iam delete-access-key \
+  --user-name COMPROMISED_USER \
+  --access-key-id AKIAIOSFODNN7EXAMPLE</code></pre>
+            </div>
+          </div>
+        </div>
 
-    <hr>
+        <span class="section-anchor" id="ir-step3"></span>
+        <div class="ir-step warning">
+          <div class="ir-step-num">3</div>
+          <div class="ir-step-body">
+            <div class="ir-step-title">Audit logs for the full exposure window <span class="ir-step-timer">T+10 min</span></div>
+            <p>Determine when the secret was first committed (not just when you noticed), and check for usage during the entire window from that timestamp to now.</p>
+            <div class="code-wrap">
+              <div class="code-header">
+                <div class="code-meta">
+                  <div class="code-dots"><div class="code-dot cd-r"></div><div class="code-dot cd-y"></div><div class="code-dot cd-g"></div></div>
+                  <div class="code-lang">bash</div>
+                  <div class="code-title">exposure window analysis</div>
+                </div>
+                <button class="copy-btn" onclick="copyCode(this)">copy</button>
+              </div>
+              <pre><code class="language-bash"># Find when the secret was first committed
+git log --all -p -S "AKIAIOSFODNN7EXAMPLE"   # search all history for the string
+git log --all --oneline | head -20            # show recent commits
 
-    <!-- SECTION: GIT HISTORY -->
-    <span class="section-anchor" id="git-history"></span>
-    <h2 class="fade-in">Why Git History Is the Hidden Danger</h2>
-    <div class="fade-in">
-      <p>Most developers know committed secrets are bad. What fewer understand is <em>why</em> deleting the file and making a new commit doesn't fix anything.</p>
-      <p>Git stores content using a <strong>content-addressed object store</strong>. When you commit a file containing a secret, git creates:</p>
-      <ul>
-        <li>A <strong>blob</strong> object: the file's content, hashed and stored</li>
-        <li>A <strong>tree</strong> object: a snapshot of the directory at that commit, referencing the blob</li>
-        <li>A <strong>commit</strong> object: metadata plus a pointer to the tree</li>
-      </ul>
-      <p>These objects remain in the repository's <code>.git</code> directory permanently, even after you delete the file in a later commit. The later commit just creates a new tree that doesn't reference the old blob — but the blob itself is still there.</p>
-      <div class="code-header" style="border-radius:6px 6px 0 0; border:1px solid var(--border); border-bottom:none; margin-top:1.2rem"><span class="code-lang">bash</span><button class="copy-btn">copy</button></div>
-      <pre style="margin-top:0; border-radius:0 0 6px 6px"><code class="language-bash"># This does NOT remove the secret from history
-git rm .env
-git commit -m "remove .env"
-git push
+# AWS CloudTrail — find API calls using the compromised key
+# Check CloudTrail console → Event history → filter by AccessKeyId
+aws cloudtrail lookup-events \
+  --lookup-attributes AttributeKey=Username,AttributeValue=COMPROMISED_USER \
+  --start-time "2024-01-01T00:00:00Z"    # adjust to exposure start time
 
-# The old blob is still reachable:
-git log --all --full-history -- .env          # find old commits
-git show &lt;old-commit-hash&gt;:.env              # read the file contents
-git checkout &lt;old-commit-hash&gt; -- .env        # restore the file</code></pre>
-      <p>Anyone who cloned the repo — including the bots that scraped it — has the full <code>.git</code> directory with all these objects. Even after a force-push that rewrites history, GitHub caches objects for a grace period.</p>
-      <p><strong>This is why the correct flow is always:</strong></p>
-      <ol>
-        <li><strong>Rotate the credential</strong> — makes it worthless regardless of who has it</li>
-        <li><strong>Clean the history</strong> — prevents future accidental re-exposure from old branches or cached objects</li>
-      </ol>
-      <p>In that order. Rotation is the fix. History cleanup is hygiene. Both matter.</p>
-    </div>
+# GitHub audit log (org admins only)
+# Settings → Audit log → filter: action:repo.access, action:org.invite
 
-    <hr>
+# Check GuardDuty findings (AWS)
+aws guardduty list-findings \
+  --detector-id YOUR_DETECTOR_ID \
+  --finding-criteria '{"Criterion":{"type":{"Eq":["UnauthorizedAccess:IAMUser/InstanceCredentialExfiltration"]}}}'</code></pre>
+            </div>
+          </div>
+        </div>
 
-    <!-- SECTION: REMOVING FROM HISTORY -->
-    <span class="section-anchor" id="removing-history"></span>
-    <h2 class="fade-in">Removing Secrets from Git History</h2>
-    <div class="fade-in">
-      <h3>Before you start: take a full backup</h3>
-      <div class="code-header" style="border-radius:6px 6px 0 0; border:1px solid var(--border); border-bottom:none"><span class="code-lang">bash</span><button class="copy-btn">copy</button></div>
-      <pre style="margin-top:0; border-radius:0 0 6px 6px"><code class="language-bash"># Create a bare mirror clone before touching anything
-git clone --mirror https://github.com/YOUR_ORG/YOUR_REPO.git repo-backup.git</code></pre>
-
-      <div class="alert-note">
-        <strong>Note:</strong> Run <code>git-filter-repo</code> on a <strong>fresh regular clone</strong> of the repo, not the mirror backup. The mirror is your safety net only.
-        <div class="code-header" style="border-radius:6px 6px 0 0; border:1px solid rgba(88,166,255,0.2); border-bottom:none; margin-top:0.75rem"><span class="code-lang">bash</span><button class="copy-btn">copy</button></div>
-        <pre style="margin-top:0; border-radius:0 0 6px 6px"><code class="language-bash"># Fresh regular clone to work in
-git clone https://github.com/YOUR_ORG/YOUR_REPO.git
-cd YOUR_REPO</code></pre>
-      </div>
-
-      <h3>Option A — git-filter-repo (recommended)</h3>
-      <p><code>git-filter-repo</code> is the current standard. It replaced the deprecated <code>git filter-branch</code> (now removed from some git distributions). Significantly faster on large repos and handles edge cases correctly.</p>
-
-      <h4>Install</h4>
-      <div class="code-header" style="border-radius:6px 6px 0 0; border:1px solid var(--border); border-bottom:none"><span class="code-lang">bash</span><button class="copy-btn">copy</button></div>
-      <pre style="margin-top:0; border-radius:0 0 6px 6px"><code class="language-bash"># macOS
-brew install git-filter-repo
-
-# Cross-platform via pip
+        <span class="section-anchor" id="ir-step4"></span>
+        <div class="ir-step info">
+          <div class="ir-step-num">4</div>
+          <div class="ir-step-body">
+            <div class="ir-step-title">Rewrite Git history to remove the secret <span class="ir-step-timer">T+30 min</span></div>
+            <p>This step is necessary even though the credential is rotated — the old secret in history is a fingerprint, and some tooling and teams may have stale clones. Use <code>git-filter-repo</code> — <strong>not</strong> <code>BFG</code> or <code>git filter-branch</code>.</p>
+            <div class="code-wrap">
+              <div class="code-header">
+                <div class="code-meta">
+                  <div class="code-dots"><div class="code-dot cd-r"></div><div class="code-dot cd-y"></div><div class="code-dot cd-g"></div></div>
+                  <div class="code-lang">bash</div>
+                  <div class="code-title">git-filter-repo — rewrite history</div>
+                </div>
+                <button class="copy-btn" onclick="copyCode(this)">copy</button>
+              </div>
+              <pre><code class="language-bash"># Install git-filter-repo (Python package)
 pip install git-filter-repo
 
-# Verify
-git filter-repo --version</code></pre>
+# OPTION A: Replace the literal secret string everywhere in history
+git filter-repo \
+  --replace-text <(echo "AKIAIOSFODNN7EXAMPLE==>REDACTED") \
+  --force
 
-      <h4>Remove a specific file from all history</h4>
-      <div class="code-header" style="border-radius:6px 6px 0 0; border:1px solid var(--border); border-bottom:none"><span class="code-lang">bash</span><button class="copy-btn">copy</button></div>
-      <pre style="margin-top:0; border-radius:0 0 6px 6px"><code class="language-bash"># Removes .env from every commit across all branches and tags
-git filter-repo --path .env --invert-paths
+# OPTION B: Remove a specific file from all history
+git filter-repo --path .env --invert-paths --force
+git filter-repo --path config/credentials.yml --invert-paths --force
 
-# File in a subdirectory
-git filter-repo --path config/credentials.yml --invert-paths
+# OPTION C: Remove by path glob (e.g., all .pem files)
+git filter-repo --path-glob "*.pem" --invert-paths --force
 
-# Remove multiple files at once
-git filter-repo --path .env --path secrets.json --path .aws/credentials --invert-paths</code></pre>
+# After rewriting, force-push ALL branches
+git remote add origin https://github.com/org/repo.git
+git push origin --all --force
+git push origin --tags --force
 
-      <h4>Replace a specific secret string across all history</h4>
-      <div class="code-header" style="border-radius:6px 6px 0 0; border:1px solid var(--border); border-bottom:none"><span class="code-lang">bash</span><button class="copy-btn">copy</button></div>
-      <pre style="margin-top:0; border-radius:0 0 6px 6px"><code class="language-bash"># Create a replacements file — format: LITERAL_STRING==>REPLACEMENT
-cat > replacements.txt &lt;&lt; 'EOF'
-AKIAIOSFODNN7EXAMPLE==>REDACTED_AWS_KEY_ID
-wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY==>REDACTED_AWS_SECRET
-ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx==>REDACTED_GITHUB_TOKEN
-EOF
+# Notify ALL collaborators: they MUST delete local clones and re-clone
+# Local clones still have the old history — git pull will NOT fix this
 
-git filter-repo --replace-text replacements.txt</code></pre>
+# Contact GitHub Support to purge caches
+# https://support.github.com/contact — "security" category</code></pre>
+            </div>
+            <div class="alert warning" style="margin-top:0.75rem; margin-bottom:0">
+              <div class="alert-icon">⚠️</div>
+              <div><strong>History rewrite is not secret invalidation.</strong> Anyone who cloned before the rewrite still has the secret. GitHub CDN caches take time to clear. This step is cleanup — not remediation. Rotation in step 1 is remediation.</div>
+            </div>
+          </div>
+        </div>
 
-      <h4>Clean up and force-push</h4>
-      <div class="code-header" style="border-radius:6px 6px 0 0; border:1px solid var(--border); border-bottom:none"><span class="code-lang">bash</span><button class="copy-btn">copy</button></div>
-      <pre style="margin-top:0; border-radius:0 0 6px 6px"><code class="language-bash"># Remove dangling objects left behind by the rewrite
-git reflog expire --expire=now --all
-git gc --prune=now --aggressive
+        <span class="section-anchor" id="ir-step5"></span>
+        <div class="ir-step done">
+          <div class="ir-step-num">5</div>
+          <div class="ir-step-body">
+            <div class="ir-step-title">Post-incident hardening &amp; documentation <span class="ir-step-timer">T+2 hours</span></div>
+            <ul>
+              <li>Enable GitHub Secret Scanning and Push Protection on the repository (and all org repos).</li>
+              <li>Install <code>gitleaks</code> pre-commit hook so the failure mode can't recur locally.</li>
+              <li>Add the secret pattern to <code>.gitignore</code> if not already present.</li>
+              <li>Audit all other repositories in the org for the same class of issue.</li>
+              <li>Document the full incident timeline: when first committed, when exposed, when detected, when rotated, when history cleaned, evidence of abuse or no evidence found.</li>
+              <li>File an internal post-mortem; determine if customer notification obligations apply (GDPR Article 33 if EU personal data involved).</li>
+            </ul>
+          </div>
+        </div>
 
-# git-filter-repo removes the remote as a safety measure — re-add it
-git remote add origin https://github.com/YOUR_ORG/YOUR_REPO.git
-
-# Force push all branches and all tags
-git push origin --force --all
-git push origin --force --tags</code></pre>
-
-      <div class="alert-warning">
-        ⚠️ <strong>Critical:</strong> All collaborators must delete their local clones and re-clone fresh. Anyone who pushes from an old clone will re-introduce the old history. Communicate this to the entire team before they do any work.
-      </div>
-
-      <h3>Option B — BFG Repo Cleaner</h3>
-      <p>BFG is simpler for common cases and requires less setup, though <code>git-filter-repo</code> handles more edge cases.</p>
-      <div class="code-header" style="border-radius:6px 6px 0 0; border:1px solid var(--border); border-bottom:none"><span class="code-lang">bash</span><button class="copy-btn">copy</button></div>
-      <pre style="margin-top:0; border-radius:0 0 6px 6px"><code class="language-bash"># Requires Java. Download bfg.jar from https://rtyley.github.io/bfg-repo-cleaner/
-
-# Work on a mirror clone
-git clone --mirror https://github.com/YOUR_ORG/YOUR_REPO.git
-
-# Remove a specific file from all history
-java -jar bfg.jar --delete-files .env YOUR_REPO.git
-
-# Replace sensitive strings (one replacement per line in passwords.txt)
-java -jar bfg.jar --replace-text passwords.txt YOUR_REPO.git
-
-# Clean up dangling objects and push
-cd YOUR_REPO.git
-git reflog expire --expire=now --all
-git gc --prune=now --aggressive
-git push --force</code></pre>
-
-      <h3>What NOT to do</h3>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>Approach</th><th>Why it doesn't work</th></tr></thead>
-          <tbody>
-            <tr><td><code>git rm &lt;file&gt;</code> + new commit</td><td>Removes from working tree only. Blob object and all previous commits unchanged.</td></tr>
-            <tr><td><code>git commit --amend</code></td><td>Only rewrites the most recent commit. All earlier commits are untouched.</td></tr>
-            <tr><td><code>git rebase -i</code> and drop the commit</td><td>Rewrites linear history but leaves blob objects until you run <code>git gc</code>, and doesn't handle all branches.</td></tr>
-            <tr><td>Making the repo private</td><td>Stops new exposure. Does not remove from history or undo scraping that already occurred.</td></tr>
-            <tr><td>Deleting and recreating the repo</td><td>Works for history, but you lose all issues, PRs, stars, wikis, and other metadata. Also, existing forks retain the full history.</td></tr>
-          </tbody>
-        </table>
-      </div>
-
-      <h3>After the rewrite: request GitHub cache invalidation</h3>
-      <p>GitHub caches repository objects and may continue to serve old commit SHAs for a period after a force-push. To request a full cache purge, contact <a href="https://support.github.com" target="_blank">GitHub Support</a>, provide the repository name and the specific commits that contained the secret. This is especially important if the repo was briefly public.</p>
+      </div><!-- /ir-timeline -->
     </div>
 
     <hr>
 
-    <!-- SECTION: SECRETS MANAGEMENT -->
-    <span class="section-anchor" id="secrets-management"></span>
-    <h2 class="fade-in">Secrets Management — The Right Way</h2>
+    <!-- HISTORY REWRITING -->
+    <span class="section-anchor" id="git-history"></span>
+    <h2 class="sec-section fade-in">Why Git History Is Permanently Dangerous</h2>
     <div class="fade-in">
-      <h3>The hierarchy of secrets storage</h3>
+      <p>Developers believe deleting a file and committing removes it from the repository. It does not. The file exists in every prior commit object and is fully retrievable with a single command:</p>
+      <div class="code-wrap">
+        <div class="code-header">
+          <div class="code-meta">
+            <div class="code-dots"><div class="code-dot cd-r"></div><div class="code-dot cd-y"></div><div class="code-dot cd-g"></div></div>
+            <div class="code-lang">bash</div>
+            <div class="code-title">retrieving "deleted" files from history</div>
+          </div>
+          <button class="copy-btn" onclick="copyCode(this)">copy</button>
+        </div>
+        <pre><code class="language-bash"># Any collaborator — or attacker — can run this
+git log --all --oneline -- .env           # find commit that had .env
+git show abc1234:.env                     # retrieve the file contents from that commit
+
+# Or scan all history for credential patterns
+gitleaks detect --source . --log-opts="--all"
+
+# TruffleHog — deep historical scan
+trufflehog git file://. --since-commit HEAD~100 --only-verified</code></pre>
+      </div>
+
+      <p>This is why exposure windows are measured from the <em>first commit containing the secret</em>, not from when the repo went public. A private repo can become public accidentally. A developer can clone a "private" repo to a personal public account. Internal threat actors exist.</p>
+    </div>
+
+    <hr>
+
+    <!-- SECRETS MANAGEMENT -->
+    <span class="section-anchor" id="secrets-mgmt"></span>
+    <h2 class="sec-section fade-in">Secrets Management — The Right Architecture</h2>
+    <div class="fade-in">
+      <h3>OIDC vs Static Keys in CI/CD</h3>
+      <p>The single most impactful change you can make is eliminating long-lived credentials from CI/CD entirely using OIDC (OpenID Connect) federation. GitHub Actions can prove to AWS/GCP/Azure <em>who it is</em> using a signed JWT, and the cloud provider issues short-lived credentials on the spot — no secret stored anywhere.</p>
+
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Method</th><th>Risk level</th><th>Notes</th></tr></thead>
+          <thead><tr><th>Approach</th><th>Secret stored in GitHub?</th><th>Credential lifetime</th><th>Rotation required?</th></tr></thead>
           <tbody>
-            <tr><td>Hardcoded in source code</td><td><span class="risk-critical">🔴 Critical</span></td><td>Never. Full stop.</td></tr>
-            <tr><td>Committed <code>.env</code> file</td><td><span class="risk-critical">🔴 Critical</span></td><td>In git history permanently, cloned by everyone</td></tr>
-            <tr><td>Untracked <code>.env</code> file</td><td><span class="risk-medium">🟡 Medium</span></td><td>Better, but per-machine risk, no rotation, no audit trail</td></tr>
-            <tr><td>GitHub Secrets</td><td><span class="risk-good">🟢 Good</span></td><td>Encrypted at rest, masked in logs, scoped to repo/env/org</td></tr>
-            <tr><td>Dedicated secrets manager</td><td><span class="risk-good">🟢 Best</span></td><td>Vault, AWS Secrets Manager — versioned, audited, auto-rotatable</td></tr>
+            <tr>
+              <td><strong>Static IAM keys</strong></td>
+              <td class="td-red">Yes — in GitHub Secrets</td>
+              <td class="td-red">Permanent until manually deleted</td>
+              <td class="td-red">Yes — manual, error-prone</td>
+            </tr>
+            <tr>
+              <td><strong>OIDC (Recommended)</strong></td>
+              <td class="td-green">No secret stored</td>
+              <td class="td-green">Per-job (~15 min)</td>
+              <td class="td-green">No — auto-expires</td>
+            </tr>
           </tbody>
         </table>
       </div>
 
-      <h3>GitHub Secrets — levels and scope</h3>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>Level</th><th>Scope</th><th>Best for</th></tr></thead>
-          <tbody>
-            <tr><td>Repository</td><td>Single repo</td><td>Project-specific credentials</td></tr>
-            <tr><td>Environment</td><td>Specific deployment environment</td><td>Environment-scoped secrets — prod DB only accessible to prod deployments</td></tr>
-            <tr><td>Organization</td><td>All repos in the org</td><td>Shared credentials like a package registry publish token</td></tr>
-          </tbody>
-        </table>
-      </div>
-      <p>Access in workflows with <code>${{ secrets.MY_SECRET_NAME }}</code>. GitHub automatically masks the exact value in logs. <strong>Note:</strong> masking only covers exact matches — base64-encoded or URL-encoded forms of the secret will not be masked. Never log secrets even indirectly.</p>
-
-      <h3>Prefer OIDC over static credentials</h3>
-      <p>Static cloud credentials (<code>AWS_ACCESS_KEY_ID</code> / <code>AWS_SECRET_ACCESS_KEY</code>) are a long-lived liability — they don't expire, must be manually rotated, and if leaked, remain valid until you notice. OIDC eliminates this by letting GitHub Actions authenticate directly to your cloud provider as a trusted identity, generating short-lived, per-run credentials automatically.</p>
-
-      <h4>AWS OIDC setup — Step 1: Create the Identity Provider</h4>
-      <p>In IAM, create an OIDC provider with URL <code>https://token.actions.githubusercontent.com</code> and Audience <code>sts.amazonaws.com</code>.</p>
-
-      <h4>Step 2: IAM trust policy</h4>
-      <div class="code-header" style="border-radius:6px 6px 0 0; border:1px solid var(--border); border-bottom:none"><span class="code-lang">json</span><button class="copy-btn">copy</button></div>
-      <pre style="margin-top:0; border-radius:0 0 6px 6px"><code class="language-json">{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Principal": {
-        "Federated": "arn:aws:iam::ACCOUNT_ID:oidc-provider/token.actions.githubusercontent.com"
-      },
-      "Action": "sts:AssumeRoleWithWebIdentity",
-      "Condition": {
-        "StringEquals": {
-          "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
-          "token.actions.githubusercontent.com:sub": "repo:YOUR_ORG/YOUR_REPO:ref:refs/heads/main"
-        }
-      }
-    }
-  ]
-}</code></pre>
-      <p>The <code>sub</code> condition scopes this role to only your <code>main</code> branch. For deploy workflows, this is exactly the right scope.</p>
-
-      <h4>Terraform equivalent</h4>
-      <div class="code-header" style="border-radius:6px 6px 0 0; border:1px solid var(--border); border-bottom:none"><span class="code-lang">hcl</span><button class="copy-btn">copy</button></div>
-      <pre style="margin-top:0; border-radius:0 0 6px 6px"><code class="language-hcl">resource "aws_iam_openid_connect_provider" "github" {
-  url            = "https://token.actions.githubusercontent.com"
-  client_id_list = ["sts.amazonaws.com"]
-  # As of mid-2023, AWS validates GitHub's OIDC against its trusted root CA directly.
-  # Thumbprint pinning is no longer enforced — value is accepted but not validated.
-  thumbprint_list = ["0000000000000000000000000000000000000000"]
-}
-
-resource "aws_iam_role" "github_actions" {
-  name = "github-actions-deploy"
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Effect    = "Allow"
-      Principal = { Federated = aws_iam_openid_connect_provider.github.arn }
-      Action    = "sts:AssumeRoleWithWebIdentity"
-      Condition = {
-        StringEquals = {
-          "token.actions.githubusercontent.com:sub" = "repo:YOUR_ORG/YOUR_REPO:ref:refs/heads/main"
-        }
-      }
-    }]
-  })
-}</code></pre>
-
-      <h4>Workflow — zero stored credentials</h4>
-      <div class="code-header" style="border-radius:6px 6px 0 0; border:1px solid var(--border); border-bottom:none"><span class="code-lang">yaml</span><button class="copy-btn">copy</button></div>
-      <pre style="margin-top:0; border-radius:0 0 6px 6px"><code class="language-yaml">permissions:
-  id-token: write    # Required to request the OIDC token
+      <div class="code-wrap">
+        <div class="code-header">
+          <div class="code-meta">
+            <div class="code-dots"><div class="code-dot cd-r"></div><div class="code-dot cd-y"></div><div class="code-dot cd-g"></div></div>
+            <div class="code-lang">yaml</div>
+            <div class="code-title">GitHub Actions — OIDC with AWS (no stored keys)</div>
+          </div>
+          <button class="copy-btn" onclick="copyCode(this)">copy</button>
+        </div>
+        <pre><code class="language-yaml">permissions:
+  id-token: write   # Required for OIDC JWT
   contents: read
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
-
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1 — SHA-pinned
+        
       - name: Configure AWS credentials via OIDC
-        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502  # v4.0.2
+        uses: aws-actions/configure-aws-credentials@010d0da01d0b5a38af31e9c3470dbfdabdecca3a  # v4.0.1
         with:
-          role-to-assume: arn:aws:iam::123456789012:role/github-actions-deploy
-          aws-region: ap-south-1
-
+          role-to-assume: arn:aws:iam::123456789012:role/GitHubActionsDeployRole
+          aws-region: us-east-1
+          # No access-key-id or secret-access-key needed
+          
       - name: Deploy
-        run: aws s3 sync ./dist s3://my-bucket</code></pre>
-      <p>No <code>AWS_ACCESS_KEY_ID</code> stored anywhere. Credentials are minted per-run and auto-expire.</p>
+        run: aws s3 sync ./dist s3://my-bucket/</code></pre>
+      </div>
 
-      <h3>Dedicated secrets managers</h3>
-      <ul>
-        <li><strong>AWS Secrets Manager</strong> — Native integration with EC2, Lambda, ECS. Automatic rotation for RDS passwords.</li>
-        <li><strong>HashiCorp Vault</strong> — Open source, self-hosted. Supports dynamic secrets (credentials that exist only for the duration of a single request).</li>
-        <li><strong>GCP Secret Manager</strong> — Strong IAM integration with Google Cloud services.</li>
-        <li><strong>Doppler / Infisical</strong> — Developer-friendly, good GitHub Actions integrations, easy to adopt incrementally.</li>
-      </ul>
+      <h3>When You Must Store a Secret in GitHub</h3>
+      <div class="code-wrap">
+        <div class="code-header">
+          <div class="code-meta">
+            <div class="code-dots"><div class="code-dot cd-r"></div><div class="code-dot cd-y"></div><div class="code-dot cd-g"></div></div>
+            <div class="code-lang">yaml</div>
+            <div class="code-title">correct secret usage in Actions</div>
+          </div>
+          <button class="copy-btn" onclick="copyCode(this)">copy</button>
+        </div>
+        <pre><code class="language-yaml">env:
+  # ✅ Correct: reference from GitHub Secrets
+  DATABASE_URL: ${{ secrets.DATABASE_URL }}
+  API_KEY: ${{ secrets.THIRD_PARTY_API_KEY }}
+  
+  # ❌ Wrong: hardcoded value
+  # DATABASE_URL: "postgresql://admin:MyPassword123@prod.db:5432/app"
+  
+  # ❌ Wrong: workflow_dispatch input (visible in UI to any Actions reader)
+  # API_KEY: ${{ inputs.api_key }}
 
-      <h3>The .env.example pattern</h3>
-      <p>Every project should have two files: <code>.env.example</code> — <strong>committed to git</strong>, documents every required variable with placeholder values; and <code>.env</code> — <strong>gitignored</strong>, contains real credentials, never committed.</p>
-      <div class="code-header" style="border-radius:6px 6px 0 0; border:1px solid var(--border); border-bottom:none"><span class="code-lang">bash</span><button class="copy-btn">copy</button></div>
-      <pre style="margin-top:0; border-radius:0 0 6px 6px"><code class="language-bash"># .env.example — committed to git, safe to share
-DATABASE_URL=postgresql://user:password@localhost:5432/mydb
-AWS_REGION=us-east-1
-STRIPE_SECRET_KEY=sk_test_REPLACE_WITH_YOUR_KEY
-SENDGRID_API_KEY=SG.REPLACE_WITH_YOUR_KEY
-GITHUB_TOKEN=ghp_REPLACE_WITH_YOUR_TOKEN</code></pre>
-
-      <h3>Secrets hygiene principles</h3>
-      <ul>
-        <li><strong>Never reuse secrets across environments.</strong> Dev, staging, and prod must have completely separate credentials. A staging breach should never be able to reach prod.</li>
-        <li><strong>Apply least privilege.</strong> A deploy job that only needs to push to S3 should not have IAM permissions to create EC2 instances. Scope every credential to exactly what it needs.</li>
-        <li><strong>Rotate on a schedule.</strong> Don't wait for an incident. Long-lived credentials accumulate risk over time. Set a calendar reminder for quarterly rotation of all long-lived secrets.</li>
-        <li><strong>Never log secrets.</strong> Not in application logs, not in CI output, not in error messages. Logs often end up in S3, Elasticsearch, or third-party SaaS with broader access than your codebase.</li>
-      </ul>
+steps:
+  - name: Use secret (will be masked in logs as ***)
+    run: |
+      echo "Connecting to database..."
+      # $DATABASE_URL is available as an environment variable
+      # GitHub automatically masks it in logs if it matches a secret value</code></pre>
+      </div>
     </div>
 
     <hr>
 
-    <!-- SECTION: ACTIONS HARDENING -->
+    <!-- ACTIONS HARDENING -->
     <span class="section-anchor" id="actions-hardening"></span>
-    <h2 class="fade-in">GitHub Actions Hardening</h2>
+    <h2 class="sec-section fade-in">GitHub Actions Hardening</h2>
     <div class="fade-in">
-      <h3>Pin third-party actions to a full commit SHA</h3>
-      <p>Tags like <code>@v3</code> or <code>@v4</code> are mutable — a compromised maintainer account can silently redirect a tag to malicious code. Your workflow runs it on the next push, with full access to your secrets and your cloud environment.</p>
-      <div class="code-header" style="border-radius:6px 6px 0 0; border:1px solid var(--border); border-bottom:none"><span class="code-lang">yaml</span><button class="copy-btn">copy</button></div>
-      <pre style="margin-top:0; border-radius:0 0 6px 6px"><code class="language-yaml"># ❌ Unsafe — tag can be silently redirected to malicious code
-- uses: actions/checkout@v4
+      <div class="code-wrap">
+        <div class="code-header">
+          <div class="code-meta">
+            <div class="code-dots"><div class="code-dot cd-r"></div><div class="code-dot cd-y"></div><div class="code-dot cd-g"></div></div>
+            <div class="code-lang">yaml</div>
+            <div class="code-title">hardened workflow template</div>
+          </div>
+          <button class="copy-btn" onclick="copyCode(this)">copy</button>
+        </div>
+        <pre><code class="language-yaml">name: Hardened CI
 
-# ✅ Safe — SHA is immutable, cannot be changed
-- uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2</code></pre>
-      <p>Always add a comment with the human-readable version. To find the SHA: go to the action's GitHub releases, click the commit link next to the version tag, copy the full 40-character SHA. Use <a href="https://docs.github.com/en/code-security/dependabot/working-with-dependabot/keeping-your-actions-up-to-date-with-dependabot" target="_blank">Dependabot for GitHub Actions</a> to get automated PRs when new versions are released.</p>
+# Restrict which events can trigger the workflow
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
 
-      <h3>Always define a permissions block</h3>
-      <div class="code-header" style="border-radius:6px 6px 0 0; border:1px solid var(--border); border-bottom:none"><span class="code-lang">yaml</span><button class="copy-btn">copy</button></div>
-      <pre style="margin-top:0; border-radius:0 0 6px 6px"><code class="language-yaml"># Set a top-level default of deny everything
-permissions: {}
+# Top-level minimal permissions — override per-job as needed
+permissions:
+  contents: read       # Only read access to code
+  # Add nothing else here unless required
 
 jobs:
   build:
-    permissions:
-      contents: read        # read the repo
-      packages: write       # publish to GitHub Packages
-
-  test:
-    permissions:
-      contents: read        # tests only need to read
-
-  deploy:
+    runs-on: ubuntu-latest
+    
+    # Job-level permissions override the workflow level
     permissions:
       contents: read
-      id-token: write       # OIDC token request</code></pre>
-
-      <h3>Never pass secrets to fork-triggered workflows</h3>
-      <div class="code-header" style="border-radius:6px 6px 0 0; border:1px solid var(--border); border-bottom:none"><span class="code-lang">yaml</span><button class="copy-btn">copy</button></div>
-      <pre style="margin-top:0; border-radius:0 0 6px 6px"><code class="language-yaml"># ❌ Dangerous — fork PR code runs with write access and secrets
-on:
-  pull_request_target:
-
-# ✅ Safe — forks are fully isolated
-on:
-  pull_request:</code></pre>
-      <p>If you need <code>pull_request_target</code> for a legitimate reason (auto-labeling, commenting from bots), never check out and execute PR code in that context.</p>
-      <div class="alert-note">
-        <strong>Note:</strong> Workflows from fork PRs run in a fully isolated context — org-level secrets and environment secrets are never passed, regardless of configuration. This is by design and cannot be overridden from the workflow side.
+      
+    steps:
+      # ✅ SHA-pin every third-party action — never use a mutable tag
+      # A tag like @v4 can be moved to a malicious commit without warning
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+      
+      - uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8
+        with:
+          node-version: '20'
+          
+      # ✅ Keep secrets narrowly scoped — pass only to steps that need them
+      - name: Build
+        run: npm ci && npm run build
+        # No secrets here — build should not need credentials
+        
+      - name: Deploy
+        env:
+          DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
+        run: ./scripts/deploy.sh
+        # Secret only visible in this step's env</code></pre>
       </div>
 
-      <h3>Never echo or print secrets</h3>
-      <div class="code-header" style="border-radius:6px 6px 0 0; border:1px solid var(--border); border-bottom:none"><span class="code-lang">yaml</span><button class="copy-btn">copy</button></div>
-      <pre style="margin-top:0; border-radius:0 0 6px 6px"><code class="language-yaml"># ❌ Direct echo — even masked, this is bad practice
-- run: echo "Token is ${{ secrets.API_TOKEN }}"
+      <h3>SHA-pinning Third-Party Actions</h3>
+      <div class="code-wrap">
+        <div class="code-header">
+          <div class="code-meta">
+            <div class="code-dots"><div class="code-dot cd-r"></div><div class="code-dot cd-y"></div><div class="code-dot cd-g"></div></div>
+            <div class="code-lang">bash</div>
+            <div class="code-title">finding SHAs for action pinning</div>
+          </div>
+          <button class="copy-btn" onclick="copyCode(this)">copy</button>
+        </div>
+        <pre><code class="language-bash"># Find the SHA for a specific tag on GitHub
+# Go to: https://github.com/actions/checkout/releases
+# Click on the tag → copy the full commit SHA from the URL
 
-# ❌ Base64 form will not be masked
-- run: echo ${{ secrets.API_TOKEN }} | base64
+# Or use the GitHub API
+curl -s "https://api.github.com/repos/actions/checkout/git/refs/tags/v4.1.1" \
+  | jq -r '.object.sha'
 
-# ✅ Always inject secrets via env:, never inline in run:
-- name: Call API
-  run: curl -H "Authorization: Bearer $API_TOKEN" https://api.example.com
-  env:
-    API_TOKEN: ${{ secrets.API_TOKEN }}</code></pre>
+# ✅ Pinned to full SHA (immutable — the only safe form)
+# uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
 
-      <h3>Enable branch protection rules</h3>
-      <p>Go to <strong>Repository Settings → Branches → Add branch protection rule</strong> for <code>main</code>:</p>
-      <ul>
-        <li>✅ Require a pull request before merging</li>
-        <li>✅ Require status checks to pass (add your secret scanning job here)</li>
-        <li>✅ Require at least one approving review</li>
-        <li>✅ Do not allow bypassing the above settings</li>
-      </ul>
-      <p>The last setting is important — without it, admins can bypass, which means the protection is only as strong as your weakest admin.</p>
-
-      <h3>Rotate secrets after any structural change</h3>
-      <p>Rotate credentials whenever: a workflow file is modified, repository visibility changes, a contributor with repo access leaves the organization, an action dependency is updated to a new pinned version, or a CI/CD integration is added or changed.</p>
+# ❌ Not pinned (tag is mutable — a compromised account can move it)
+# uses: actions/checkout@v4
+# uses: actions/checkout@main</code></pre>
+        </div>
     </div>
 
     <hr>
 
-    <!-- SECTION: PREVENTIVE CONTROLS -->
-    <span class="section-anchor" id="preventive-controls"></span>
-    <h2 class="fade-in">Preventive Controls</h2>
+    <!-- PREVENTIVE CONTROLS -->
+    <span class="section-anchor" id="preventive"></span>
+    <h2 class="sec-section fade-in">Preventive Controls</h2>
     <div class="fade-in">
-      <h3>Layer 1 — Pre-commit hooks</h3>
-      <div class="code-header" style="border-radius:6px 6px 0 0; border:1px solid var(--border); border-bottom:none"><span class="code-lang">bash</span><button class="copy-btn">copy</button></div>
-      <pre style="margin-top:0; border-radius:0 0 6px 6px"><code class="language-bash">pip install pre-commit    # or: brew install pre-commit</code></pre>
-
-      <div class="code-header" style="border-radius:6px 6px 0 0; border:1px solid var(--border); border-bottom:none; margin-top:1rem"><span class="code-lang">.pre-commit-config.yaml</span><button class="copy-btn">copy</button></div>
-      <pre style="margin-top:0; border-radius:0 0 6px 6px"><code class="language-yaml">repos:
-  # gitleaks — high signal-to-noise, covers 100+ secret types
+      <h3>Pre-commit Hook with gitleaks</h3>
+      <div class="code-wrap">
+        <div class="code-header">
+          <div class="code-meta">
+            <div class="code-dots"><div class="code-dot cd-r"></div><div class="code-dot cd-y"></div><div class="code-dot cd-g"></div></div>
+            <div class="code-lang">yaml</div>
+            <div class="code-title">.pre-commit-config.yaml</div>
+          </div>
+          <button class="copy-btn" onclick="copyCode(this)">copy</button>
+        </div>
+        <pre><code class="language-yaml">repos:
   - repo: https://github.com/gitleaks/gitleaks
-    rev: v8.18.4
+    rev: v8.18.4        # pin to a specific version
     hooks:
       - id: gitleaks
 
-  # detect-secrets — good for custom patterns and false-positive management
   - repo: https://github.com/Yelp/detect-secrets
-    rev: v1.5.0
+    rev: v1.4.0
     hooks:
       - id: detect-secrets
-        args: ['--baseline', '.secrets.baseline']
+        args: ['--baseline', '.secrets.baseline']</code></pre>
+      </div>
 
-  # General hygiene
-  - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.5.0
-    hooks:
-      - id: check-added-large-files
-      - id: detect-private-key
-      - id: check-merge-conflict</code></pre>
+      <div class="code-wrap">
+        <div class="code-header">
+          <div class="code-meta">
+            <div class="code-dots"><div class="code-dot cd-r"></div><div class="code-dot cd-y"></div><div class="code-dot cd-g"></div></div>
+            <div class="code-lang">bash</div>
+            <div class="code-title">setup pre-commit</div>
+          </div>
+          <button class="copy-btn" onclick="copyCode(this)">copy</button>
+        </div>
+        <pre><code class="language-bash">pip install pre-commit
+pre-commit install        # installs hooks into .git/hooks/pre-commit
+pre-commit run --all-files  # run on all files (first time / CI)
 
-      <div class="code-header" style="border-radius:6px 6px 0 0; border:1px solid var(--border); border-bottom:none; margin-top:1rem"><span class="code-lang">bash</span><button class="copy-btn">copy</button></div>
-      <pre style="margin-top:0; border-radius:0 0 6px 6px"><code class="language-bash"># Activate for every developer (run once after cloning)
-pre-commit install
+# For team enforcement — add to CI too
+# hooks run on each developer's machine, but
+# someone can always use --no-verify, so CI is the backstop
 
-# Managing false positives with a baseline
-detect-secrets scan > .secrets.baseline
-git add .secrets.baseline
-git commit -m "add detect-secrets baseline"</code></pre>
+# gitleaks as CI step (GitHub Actions)
+- name: Scan for secrets
+  uses: gitleaks/gitleaks-action@v2
+  env:
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}</code></pre>
+      </div>
 
-      <h3>Layer 2 — GitHub push protection</h3>
-      <p>GitHub's native secret scanning covers 200+ secret types across major cloud providers, SaaS services, and developer tools. Push protection blocks the <code>git push</code> itself when a known pattern is detected.</p>
-      <p><strong>Enable for a single repository:</strong><br>Repository → Settings → Security → Code security and analysis → Secret scanning → Enable → Push protection → Enable</p>
-      <p><strong>Enable org-wide:</strong><br>Organization → Settings → Code security and analysis → Secret scanning → Enable for all repositories → Push protection → Enable for all repositories</p>
+      <h3>The .env.example Pattern</h3>
+      <div class="code-wrap">
+        <div class="code-header">
+          <div class="code-meta">
+            <div class="code-dots"><div class="code-dot cd-r"></div><div class="code-dot cd-y"></div><div class="code-dot cd-g"></div></div>
+            <div class="code-lang">bash</div>
+            <div class="code-title">.env.example (commit this) vs .env (never commit)</div>
+          </div>
+          <button class="copy-btn" onclick="copyCode(this)">copy</button>
+        </div>
+        <pre><code class="language-bash"># .env.example — committed to repo, shows structure, no real values
+DATABASE_URL=postgresql://user:password@host:5432/dbname
+AWS_ACCESS_KEY_ID=random_api_for_example_AKIAIOSFODNN7EXAMPLE       # fake example key
+AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/random/bPxRfiCYEXAMPLEKEY
+STRIPE_SECRET_KEY=sk_test_ransomAPIKEY 
+JWT_SECRET=your-256-bit-secret-here
+REDIS_URL=redis://localhost:6379
 
-      <h3>Layer 3 — CI scanning: the backstop</h3>
-      <div class="code-header" style="border-radius:6px 6px 0 0; border:1px solid var(--border); border-bottom:none"><span class="code-lang">yaml</span><button class="copy-btn">copy</button></div>
-      <pre style="margin-top:0; border-radius:0 0 6px 6px"><code class="language-yaml">name: Security checks
-
-on: [push, pull_request]
-
-jobs:
-  secret-scan:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-        with:
-          fetch-depth: 0    # Full history — scan all commits, not just HEAD
-
-      - name: Scan for secrets
-        uses: gitleaks/gitleaks-action@f914c8fe2f7ea4f0c96f11c1af2a254fe1278e09  # v2.3.2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}</code></pre>
-
-      <h3>Layer 4 — Repository and org hygiene</h3>
-      <div class="code-header" style="border-radius:6px 6px 0 0; border:1px solid var(--border); border-bottom:none"><span class="code-lang">.gitignore</span><button class="copy-btn">copy</button></div>
-      <pre style="margin-top:0; border-radius:0 0 6px 6px"><code class="language-gitignore"># Secrets and credentials
-.env
-.env.*
-!.env.example
-*.pem
-*.key
-*.p12
-*.jks
-*.pfx
-*.asc
-credentials.json
-service-account*.json
-*_rsa
-*_rsa.pub
-*_ed25519
-*_ed25519.pub
-
-# Cloud provider configs
-.aws/
-.gcloud/
-kubeconfig
-*.kubeconfig
-
-# IDE configs (can contain paths and tokens)
-.idea/
-.vscode/settings.json
-*.sublime-workspace
-*.code-workspace</code></pre>
-
-      <h3>Layer 5 — Historical audit</h3>
-      <div class="code-header" style="border-radius:6px 6px 0 0; border:1px solid var(--border); border-bottom:none"><span class="code-lang">bash</span><button class="copy-btn">copy</button></div>
-      <pre style="margin-top:0; border-radius:0 0 6px 6px"><code class="language-bash"># Scan entire commit history of current repo
-gitleaks detect --source . --log-opts="--all"
-
-# Export results as JSON for structured review
-gitleaks detect --source . --log-opts="--all" --report-format json --report-path gitleaks-report.json
-
-# TruffleHog — excellent for verified, high-confidence findings only
-trufflehog git https://github.com/YOUR_ORG/YOUR_REPO --only-verified
-
-# Scan an entire GitHub organization
-trufflehog github --org=YOUR_ORG --only-verified</code></pre>
+# .env — never committed (in .gitignore), contains real values
+DATABASE_URL=postgresql://admin:ActualP@ssw0rd!@prod-db.company.com:5432/app
+AWS_ACCESS_KEY_ID=AKIA...             # real key
+...</code></pre>
+        </div>
     </div>
 
     <hr>
 
-    <!-- SECTION: HARD NOS -->
+    <!-- HARD NOS -->
     <span class="section-anchor" id="hard-nos"></span>
-    <h2 class="fade-in">Hard Nos — Common Mistakes That Cause Incidents</h2>
+    <h2 class="sec-section fade-in">Hard No's</h2>
     <div class="fade-in">
       <div class="table-wrap">
-        <table class="hardnos">
-          <thead><tr><th>The mistake</th><th>Why it's wrong</th></tr></thead>
+        <table>
+          <thead><tr><th>Pattern</th><th>Why it fails</th></tr></thead>
           <tbody>
-            <tr><td>"I'll push this key temporarily and remove it in the next commit"</td><td>Bots scan continuously. The moment it hits the remote, assume it's been harvested. There is no "before anyone sees it."</td></tr>
-            <tr><td>"I made it private in 30 seconds so it's fine"</td><td>You are reacting to an automated process that operates in under 5 seconds. Treat any public exposure as a confirmed leak regardless of duration.</td></tr>
-            <tr><td>Deleting the file and committing to "remove" the secret</td><td>git's object store retains the blob permanently. Deletion only removes the file from the working tree. The secret is still in every previous commit.</td></tr>
-            <tr><td>Reusing a leaked credential after rotation</td><td>Generate a fresh credential. The infrastructure that allowed the leak may still be compromised.</td></tr>
-            <tr><td>Using real credentials against test or staging services</td><td>"Test" services often share infrastructure with prod or have their own exploitable value. Use dedicated sandbox credentials with zero prod access.</td></tr>
-            <tr><td>Pinning actions to a mutable tag like <code>@v4</code></td><td>Tags are mutable pointers. A compromised maintainer account can silently redirect <code>@v4</code> to malicious code. Pin to a SHA.</td></tr>
-            <tr><td>Echoing secrets in workflow steps</td><td>GitHub's masking only covers the exact secret value. Base64, URL-encoded, or partial forms appear in logs unmasked.</td></tr>
-            <tr><td>Using <code>workflow_dispatch</code> inputs to pass secrets</td><td>Inputs are visible in the Actions run UI and logs to anyone with Actions read access. Use GitHub Secrets instead — they are never reflected in logs.</td></tr>
-            <tr><td>Long-lived static cloud credentials when OIDC is available</td><td>Static keys don't expire, accumulate over time, and require manual rotation. OIDC credentials are per-run and auto-expire.</td></tr>
-            <tr><td>Committing a <code>.env</code> because it "only has dev values"</td><td>Dev values often share patterns or services with staging. Once the pattern is established, someone commits a prod <code>.env</code> the same way.</td></tr>
+            <tr>
+              <td class="td-yellow">Hardcoding a secret "temporarily" in code</td>
+              <td>Commits are permanent. The cleanup commit never happens, or happens but the original commit remains in history forever.</td>
+            </tr>
+            <tr>
+              <td class="td-yellow">Adding <code>.env</code> to <code>.gitignore</code> after it was already committed</td>
+              <td><code>.gitignore</code> only affects untracked files. If <code>.env</code> is already tracked, you must <code>git rm --cached .env</code> and rewrite history.</td>
+            </tr>
+            <tr>
+              <td class="td-yellow">Believing private repos are safe from credential scanning</td>
+              <td>Forks, accidental visibility toggles, internal threat actors, and compromised GitHub accounts all create exposure paths. Defense-in-depth must work independently of repo visibility.</td>
+            </tr>
+            <tr>
+              <td class="td-yellow">Using mutable action tags: <code>@v4</code>, <code>@main</code></td>
+              <td>Tags can be moved to a different (malicious) commit by anyone with push access to the action's repo. A supply chain attack via a compromised action maintainer's account can exfiltrate your secrets.</td>
+            </tr>
+            <tr>
+              <td class="td-yellow">Using <code>workflow_dispatch</code> inputs for secrets</td>
+              <td>Inputs are visible in the GitHub Actions run UI to anyone with read access to Actions. Use <code>secrets.*</code> context — those are masked in logs.</td>
+            </tr>
+            <tr>
+              <td class="td-yellow">Long-lived static cloud credentials in CI when OIDC is available</td>
+              <td>Static keys don't expire, accumulate over time, and require manual rotation. OIDC credentials are per-job, auto-expire, and leave no stored secret.</td>
+            </tr>
+            <tr>
+              <td class="td-yellow">Committing <code>.env</code> because "it only has dev values"</td>
+              <td>Dev values share patterns with prod. Once the team normalises committing <code>.env</code>, someone will commit a prod one the same way.</td>
+            </tr>
           </tbody>
         </table>
       </div>
@@ -1248,49 +2411,66 @@ trufflehog github --org=YOUR_ORG --only-verified</code></pre>
 
     <hr>
 
-    <!-- SECTION: CHECKLISTS -->
+    <!-- CHECKLISTS -->
     <span class="section-anchor" id="checklists"></span>
-    <h2 class="fade-in">Quick Reference Checklists</h2>
+    <h2 class="neutral-section fade-in">Interactive Checklists</h2>
     <div class="fade-in">
 
       <div class="checklist-card">
-        <h3>Before merging any PR <span class="badge badge-yellow">routine</span></h3>
+        <h3>Before merging any PR <span class="cl-badge cl-y">routine</span></h3>
         <ul class="checklist" id="cl-pr">
-          <li><div class="check-box" onclick="toggleCheck(this)"></div><span><code>gitleaks</code> pre-commit hook ran clean on all commits</span></li>
-          <li><div class="check-box" onclick="toggleCheck(this)"></div><span><code>.env</code> and all credential files are in <code>.gitignore</code> and not tracked (<code>git ls-files | grep .env</code>)</span></li>
-          <li><div class="check-box" onclick="toggleCheck(this)"></div><span>Any new workflow files use <code>${{ secrets.NAME }}</code> — no hardcoded values</span></li>
-          <li><div class="check-box" onclick="toggleCheck(this)"></div><span>Third-party actions are pinned to full commit SHAs</span></li>
-          <li><div class="check-box" onclick="toggleCheck(this)"></div><span><code>permissions:</code> block is defined with minimum required access</span></li>
+          <li><div class="check-box" onclick="toggleCheck(this)"></div><span><code>gitleaks</code> pre-commit hook ran clean on all commits in the branch</span></li>
+          <li><div class="check-box" onclick="toggleCheck(this)"></div><span><code>.env</code> and all credential files are in <code>.gitignore</code> and not tracked — verify with <code>git ls-files | grep -E '\.env'</code></span></li>
+          <li><div class="check-box" onclick="toggleCheck(this)"></div><span>Any new workflow files use <code>${{ secrets.NAME }}</code> — no hardcoded values anywhere</span></li>
+          <li><div class="check-box" onclick="toggleCheck(this)"></div><span>All third-party Actions pinned to full commit SHAs (not tags like <code>@v4</code>)</span></li>
+          <li><div class="check-box" onclick="toggleCheck(this)"></div><span><code>permissions:</code> block defined at workflow level with minimum required access</span></li>
           <li><div class="check-box" onclick="toggleCheck(this)"></div><span>No <code>workflow_dispatch</code> inputs used to pass secrets</span></li>
+          <li><div class="check-box" onclick="toggleCheck(this)"></div><span>Empty directories tracked via <code>.gitkeep</code>, not committed with actual temp files</span></li>
         </ul>
       </div>
 
       <div class="checklist-card">
-        <h3>Before making any repository public <span class="badge badge-yellow">critical</span></h3>
+        <h3>Before making any repository public <span class="cl-badge cl-r">critical</span></h3>
         <ul class="checklist" id="cl-public">
           <li><div class="check-box" onclick="toggleCheck(this)"></div><span>Full history scan: <code>gitleaks detect --source . --log-opts="--all"</code></span></li>
+          <li><div class="check-box" onclick="toggleCheck(this)"></div><span>TruffleHog historical scan: <code>trufflehog git file://. --only-verified</code></span></li>
           <li><div class="check-box" onclick="toggleCheck(this)"></div><span>Confirm no <code>.env*</code> files tracked: <code>git ls-files | grep -E '\.env'</code></span></li>
-          <li><div class="check-box" onclick="toggleCheck(this)"></div><span>Review all workflow files for hardcoded credentials</span></li>
-          <li><div class="check-box" onclick="toggleCheck(this)"></div><span>GitHub Secret Scanning and push protection enabled</span></li>
-          <li><div class="check-box" onclick="toggleCheck(this)"></div><span>Third-party action references pinned to SHAs</span></li>
-          <li><div class="check-box" onclick="toggleCheck(this)"></div><span>Engineering lead has reviewed the full repository</span></li>
-          <li><div class="check-box" onclick="toggleCheck(this)"></div><span>Branch protection configured on <code>main</code></span></li>
+          <li><div class="check-box" onclick="toggleCheck(this)"></div><span>Review all workflow files in <code>.github/workflows/</code> for hardcoded values</span></li>
+          <li><div class="check-box" onclick="toggleCheck(this)"></div><span>GitHub Secret Scanning and Push Protection enabled on the repo</span></li>
+          <li><div class="check-box" onclick="toggleCheck(this)"></div><span>All Actions pinned to full commit SHAs</span></li>
+          <li><div class="check-box" onclick="toggleCheck(this)"></div><span>Branch protection configured on <code>main</code> — require PR review, status checks</span></li>
+          <li><div class="check-box" onclick="toggleCheck(this)"></div><span>Engineering lead reviewed the full repository and git history</span></li>
+          <li><div class="check-box" onclick="toggleCheck(this)"></div><span>Default branch: <code>main</code> not <code>master</code> — check recent convention</span></li>
         </ul>
       </div>
 
       <div class="checklist-card">
-        <h3>After an exposure incident <span class="badge badge-red">incident</span></h3>
+        <h3>After a secrets exposure incident <span class="cl-badge cl-r">incident</span></h3>
         <ul class="checklist" id="cl-incident">
-          <li><div class="check-box" onclick="toggleCheck(this)"></div><span>All exposed credentials rotated (deleted and replaced — not just deactivated)</span></li>
-          <li><div class="check-box" onclick="toggleCheck(this)"></div><span>Sessions and OAuth tokens invalidated</span></li>
-          <li><div class="check-box" onclick="toggleCheck(this)"></div><span>Access logs reviewed for the full exposure window</span></li>
-          <li><div class="check-box" onclick="toggleCheck(this)"></div><span>Evidence of abuse escalated if found</span></li>
-          <li><div class="check-box" onclick="toggleCheck(this)"></div><span>Git history rewritten with <code>git-filter-repo</code></span></li>
-          <li><div class="check-box" onclick="toggleCheck(this)"></div><span>All collaborators notified to delete local clones and re-clone</span></li>
-          <li><div class="check-box" onclick="toggleCheck(this)"></div><span>GitHub Support contacted to invalidate cache</span></li>
-          <li><div class="check-box" onclick="toggleCheck(this)"></div><span>Full incident timeline documented</span></li>
-          <li><div class="check-box" onclick="toggleCheck(this)"></div><span>Post-incident controls implemented (push protection, pre-commit hooks, CI scan)</span></li>
-          <li><div class="check-box" onclick="toggleCheck(this)"></div><span>All other org repositories audited for similar issues</span></li>
+          <li><div class="check-box" onclick="toggleCheck(this)"></div><span>All exposed credentials <strong>deleted and replaced</strong> (not deactivated) at the issuing provider</span></li>
+          <li><div class="check-box" onclick="toggleCheck(this)"></div><span>Active sessions and OAuth tokens invalidated</span></li>
+          <li><div class="check-box" onclick="toggleCheck(this)"></div><span>Exposure window determined (first commit date to detection date)</span></li>
+          <li><div class="check-box" onclick="toggleCheck(this)"></div><span>Access logs audited for the full exposure window — evidence of abuse documented</span></li>
+          <li><div class="check-box" onclick="toggleCheck(this)"></div><span>Evidence of abuse escalated to security team / legal if found</span></li>
+          <li><div class="check-box" onclick="toggleCheck(this)"></div><span>Git history rewritten with <code>git-filter-repo</code>, force-pushed to all branches</span></li>
+          <li><div class="check-box" onclick="toggleCheck(this)"></div><span>All collaborators notified: must delete local clones and re-clone</span></li>
+          <li><div class="check-box" onclick="toggleCheck(this)"></div><span>GitHub Support contacted to purge cached views of old commits</span></li>
+          <li><div class="check-box" onclick="toggleCheck(this)"></div><span>Full incident timeline documented (T+0 through resolution)</span></li>
+          <li><div class="check-box" onclick="toggleCheck(this)"></div><span>Push protection, pre-commit hooks, and CI scan enabled on all org repos</span></li>
+          <li><div class="check-box" onclick="toggleCheck(this)"></div><span>Post-mortem completed — root cause addressed, not just symptom</span></li>
+          <li><div class="check-box" onclick="toggleCheck(this)"></div><span>Notification obligations assessed (GDPR Art. 33 / breach notification laws)</span></li>
+        </ul>
+      </div>
+
+      <div class="checklist-card">
+        <h3>Starting a new repository <span class="cl-badge cl-b">setup</span></h3>
+        <ul class="checklist" id="cl-new">
+          <li><div class="check-box" onclick="toggleCheck(this)"></div><span><code>.gitignore</code> written <strong>before</strong> first commit — never added after files are staged</span></li>
+          <li><div class="check-box" onclick="toggleCheck(this)"></div><span><code>.env.example</code> committed as template; <code>.env</code> in <code>.gitignore</code></span></li>
+          <li><div class="check-box" onclick="toggleCheck(this)"></div><span>Empty required directories have <code>.gitkeep</code> files</span></li>
+          <li><div class="check-box" onclick="toggleCheck(this)"></div><span>pre-commit hook installed: <code>pre-commit install</code></span></li>
+          <li><div class="check-box" onclick="toggleCheck(this)"></div><span>Default branch is <code>main</code>; branch protection rules configured</span></li>
+          <li><div class="check-box" onclick="toggleCheck(this)"></div><span>GitHub Secret Scanning and Push Protection enabled from day one</span></li>
         </ul>
       </div>
 
@@ -1298,109 +2478,120 @@ trufflehog github --org=YOUR_ORG --only-verified</code></pre>
 
     <hr>
 
-    <!-- SECTION: REFERENCES -->
+    <!-- REFERENCES -->
     <span class="section-anchor" id="references"></span>
-    <h2 class="fade-in">References</h2>
-    <div class="fade-in refs-grid">
+    <h2 class="neutral-section fade-in">References</h2>
+    <div class="refs-grid fade-in">
+      <div class="refs-card">
+        <h4>Git Documentation</h4>
+        <ul>
+          <li><a href="https://git-scm.com/docs" target="_blank">Official Git Reference</a></li>
+          <li><a href="https://git-scm.com/book/en/v2" target="_blank">Pro Git (free book)</a></li>
+          <li><a href="https://git-scm.com/docs/git-filter-repo" target="_blank">git-filter-repo man page</a></li>
+          <li><a href="https://www.conventionalcommits.org/" target="_blank">Conventional Commits spec</a></li>
+        </ul>
+      </div>
       <div class="refs-card">
         <h4>GitHub Documentation</h4>
         <ul>
-          <li><a href="https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/removing-sensitive-data-from-a-repository" target="_blank">Removing sensitive data from a repository</a></li>
-          <li><a href="https://docs.github.com/en/actions/security-for-github-actions/security-guides/using-secrets-in-github-actions" target="_blank">Using secrets in GitHub Actions</a></li>
-          <li><a href="https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions" target="_blank">Security hardening for GitHub Actions</a></li>
-          <li><a href="https://docs.github.com/en/code-security/secret-scanning/about-secret-scanning" target="_blank">Secret scanning and push protection</a></li>
-          <li><a href="https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services" target="_blank">Configuring OIDC in AWS</a></li>
-          <li><a href="https://docs.github.com/en/code-security/dependabot/working-with-dependabot/keeping-your-actions-up-to-date-with-dependabot" target="_blank">Actions updates with Dependabot</a></li>
+          <li><a href="https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/removing-sensitive-data-from-a-repository" target="_blank">Removing sensitive data from a repo</a></li>
+          <li><a href="https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions" target="_blank">Hardening GitHub Actions</a></li>
+          <li><a href="https://docs.github.com/en/code-security/secret-scanning/about-secret-scanning" target="_blank">Secret Scanning &amp; Push Protection</a></li>
+          <li><a href="https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services" target="_blank">OIDC with AWS</a></li>
         </ul>
       </div>
       <div class="refs-card">
         <h4>Tools</h4>
         <ul>
-          <li><a href="https://github.com/newren/git-filter-repo" target="_blank">git-filter-repo</a> — history rewriting (recommended)</li>
+          <li><a href="https://github.com/newren/git-filter-repo" target="_blank">git-filter-repo</a> — history rewriting</li>
           <li><a href="https://github.com/gitleaks/gitleaks" target="_blank">gitleaks</a> — secret detection</li>
-          <li><a href="https://github.com/Yelp/detect-secrets" target="_blank">detect-secrets</a> — false-positive management</li>
-          <li><a href="https://github.com/trufflesecurity/trufflehog" target="_blank">truffleHog</a> — deep history scanning</li>
-          <li><a href="https://rtyley.github.io/bfg-repo-cleaner/" target="_blank">BFG Repo Cleaner</a> — simpler history rewriting</li>
+          <li><a href="https://github.com/Yelp/detect-secrets" target="_blank">detect-secrets</a> — false positive management</li>
+          <li><a href="https://github.com/trufflesecurity/trufflehog" target="_blank">TruffleHog</a> — deep historical scan</li>
           <li><a href="https://pre-commit.com/" target="_blank">pre-commit</a> — hook framework</li>
         </ul>
       </div>
       <div class="refs-card">
         <h4>Standards</h4>
         <ul>
-          <li><a href="https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html" target="_blank">OWASP Secrets Management Cheat Sheet</a></li>
-          <li><a href="https://owasp.org/Top10/A02_2021-Cryptographic_Failures/" target="_blank">OWASP Top 10 — A02: Cryptographic Failures</a></li>
-          <li><a href="https://cwe.mitre.org/data/definitions/798.html" target="_blank">CWE-798: Use of Hard-coded Credentials</a></li>
+          <li><a href="https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html" target="_blank">OWASP Secrets Management</a></li>
+          <li><a href="https://cwe.mitre.org/data/definitions/798.html" target="_blank">CWE-798: Hardcoded Credentials</a></li>
+          <li><a href="https://owasp.org/Top10/A02_2021-Cryptographic_Failures/" target="_blank">OWASP Top 10: A02 Cryptographic Failures</a></li>
         </ul>
       </div>
     </div>
 
     <hr>
-    <p class="fade-in" style="color:var(--text-muted); font-size:0.9rem; font-style:italic">Found this useful? Share it with your team — especially the checklist before making any repo public. The five minutes it takes to run through it are worth considerably more than the incident response that follows if you skip it.</p>
+    <p class="fade-in" style="color:var(--text-muted); font-size:0.88rem; font-style:italic; margin-bottom:0">This guide is updated for Git 2.39+ and the current GitHub Actions security posture. Share the checklists with your team — particularly the "before making a repo public" one.</p>
 
   </main>
 </div>
 
 <!-- FOOTER -->
 <footer class="site-footer">
-  github-secrets-guide &nbsp;·&nbsp; <a href="https://pages.github.com" target="_blank">GitHub Pages</a>
+  git-mastery-and-secrets-guide &nbsp;·&nbsp; <a href="https://pages.github.com" target="_blank">GitHub Pages</a> &nbsp;·&nbsp; Last reviewed 2025
 </footer>
 
 <script>
-  // Syntax highlighting
   hljs.highlightAll();
 
-  // Reading progress bar
+  // Progress bar
   const bar = document.getElementById('progressBar');
   window.addEventListener('scroll', () => {
-    const docH = document.documentElement.scrollHeight - window.innerHeight;
-    bar.style.width = (window.scrollY / docH * 100) + '%';
-  });
+    const h = document.documentElement.scrollHeight - window.innerHeight;
+    bar.style.width = (window.scrollY / h * 100) + '%';
+  }, { passive: true });
 
-  // Active TOC link tracking
+  // TOC active link tracking
   const tocLinks = document.querySelectorAll('.toc-list a');
-  const anchors = document.querySelectorAll('.section-anchor');
-  const observer = new IntersectionObserver((entries) => {
+  const anchors  = document.querySelectorAll('.section-anchor');
+  const obs = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
       if (entry.isIntersecting) {
         const id = entry.target.id;
         tocLinks.forEach(a => {
-          a.classList.toggle('active', a.getAttribute('href') === '#' + id);
+          const match = a.getAttribute('href') === '#' + id;
+          a.classList.toggle('active', match);
         });
       }
     });
-  }, { rootMargin: '-56px 0px -70% 0px' });
-  anchors.forEach(a => observer.observe(a));
+  }, { rootMargin: '-' + (56) + 'px 0px -65% 0px' });
+  anchors.forEach(a => obs.observe(a));
 
-  // Copy buttons
-  document.querySelectorAll('.copy-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const pre = btn.closest('.code-header').nextElementSibling;
-      navigator.clipboard.writeText(pre.innerText).then(() => {
-        btn.textContent = 'copied!';
-        btn.classList.add('copied');
-        setTimeout(() => { btn.textContent = 'copy'; btn.classList.remove('copied'); }, 2000);
-      });
+  // Copy button
+  function copyCode(btn) {
+    const pre = btn.closest('.code-wrap').querySelector('pre');
+    navigator.clipboard.writeText(pre.innerText.trim()).then(() => {
+      btn.textContent = 'copied!';
+      btn.classList.add('copied');
+      setTimeout(() => { btn.textContent = 'copy'; btn.classList.remove('copied'); }, 2000);
     });
+  }
+  // Also support data-copy on old-style elements
+  document.querySelectorAll('.copy-btn').forEach(btn => {
+    if (!btn.getAttribute('onclick')) {
+      btn.addEventListener('click', () => copyCode(btn));
+    }
   });
 
   // Fade-in on scroll
-  const fadeEls = document.querySelectorAll('.fade-in');
   const fadeObs = new IntersectionObserver((entries) => {
-    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); fadeObs.unobserve(e.target); } });
-  }, { threshold: 0.05 });
-  fadeEls.forEach(el => fadeObs.observe(el));
+    entries.forEach(e => {
+      if (e.isIntersecting) { e.target.classList.add('visible'); fadeObs.unobserve(e.target); }
+    });
+  }, { threshold: 0.04 });
+  document.querySelectorAll('.fade-in').forEach(el => fadeObs.observe(el));
 
-  // Interactive checklists
+  // Checklists
   function toggleCheck(box) {
     box.classList.toggle('checked');
-    const li = box.closest('li');
+    const li   = box.closest('li');
     const span = li.querySelector('span');
     if (box.classList.contains('checked')) {
-      li.classList.add('checked-item');
+      li.style.opacity = '0.55';
       span.style.textDecoration = 'line-through';
-      span.style.color = 'var(--text-muted)';
+      span.style.color = 'var(--text-dim)';
     } else {
-      li.classList.remove('checked-item');
+      li.style.opacity = '';
       span.style.textDecoration = '';
       span.style.color = '';
     }
